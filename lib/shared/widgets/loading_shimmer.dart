@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
-/// Skeleton shimmer for loading states (dashboard/insights).
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_radii.dart';
+
+/// Skeleton shimmer for loading states.
+///
+/// Built from the system's own greys and edged with the hairline, so a loading
+/// page and a loaded page share one palette instead of flashing raw greys.
 class LoadingShimmer extends StatelessWidget {
   final double height;
   final double? width;
@@ -10,26 +16,26 @@ class LoadingShimmer extends StatelessWidget {
     super.key,
     this.height = 80,
     this.width,
-    this.borderRadius = const BorderRadius.all(Radius.circular(16)),
+    this.borderRadius = AppRadii.radiusMd,
   });
 
   @override
   Widget build(BuildContext context) {
-    final base = Theme.of(context).brightness == Brightness.dark
-        ? Colors.grey.shade800
-        : Colors.grey.shade300;
-    final highlight = Theme.of(context).brightness == Brightness.dark
-        ? Colors.grey.shade700
-        : Colors.grey.shade100;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
-      baseColor: base,
-      highlightColor: highlight,
+      baseColor: isDark ? AppColors.surfaceDarkElevated : AppColors.hairlineSoft,
+      highlightColor:
+          isDark ? AppColors.borderDark : AppColors.canvasElevated,
       child: Container(
         height: height,
         width: width,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color:
+              isDark ? AppColors.surfaceDark : AppColors.canvasElevated,
           borderRadius: borderRadius,
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.hairline,
+          ),
         ),
       ),
     );

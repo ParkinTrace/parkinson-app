@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/analysis_mode_provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/layout/top_bar.dart';
 import '../../../data/repositories/session_repository.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -44,7 +45,7 @@ class DetailedMetricsScreen extends ConsumerWidget {
         return Scaffold(
           appBar: AppBar(title: const Text('Insights')),
           body: GradientBackground(
-            child: ListView(padding: const EdgeInsets.all(16), children: [
+            child: ListView(padding: AppSpacing.cardPadding, children: [
               const EmptyState(
                 icon: Icons.science_outlined,
                 title: 'No Layer 1 analysis yet',
@@ -58,10 +59,10 @@ class DetailedMetricsScreen extends ConsumerWidget {
       return Scaffold(
         appBar: const AppTopBar(title: 'Insights', subtitle: 'Layer 1 · Quick Analysis'),
         body: GradientBackground(
-          child: ListView(padding: const EdgeInsets.all(16), children: [
+          child: ListView(padding: AppSpacing.cardPadding, children: [
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: AppSpacing.cardPadding,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Your typing-pattern comparison', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
@@ -78,7 +79,7 @@ class DetailedMetricsScreen extends ConsumerWidget {
             if (features != null && features.isNotEmpty)
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.smMd),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('Session metrics', style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 8),
@@ -102,7 +103,7 @@ class DetailedMetricsScreen extends ConsumerWidget {
       return Scaffold(
         appBar: AppBar(title: const Text('Insights')),
         body: const GradientBackground(
-          child: Padding(padding: EdgeInsets.all(16), child: CardShimmer()),
+          child: Padding(padding: AppSpacing.cardPadding, child: CardShimmer()),
         ),
       );
     }
@@ -133,7 +134,7 @@ class DetailedMetricsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Insights')),
       body: GradientBackground(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.cardPadding,
           children: [
             if (signals.isEmpty)
               const EmptyState(

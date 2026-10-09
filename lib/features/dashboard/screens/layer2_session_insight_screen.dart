@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/top_bar.dart';
+import '../../../core/theme/app_spacing.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../data/models/typing_session.dart';
@@ -52,7 +53,7 @@ class Layer2SessionInsightScreen extends ConsumerWidget {
       appBar: const AppTopBar(title: "Today's typing session", subtitle: 'Personal monitoring'),
       body: GradientBackground(
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: AppSpacing.screenPadding,
           children: [
             Text('SESSION METRICS', style: Theme.of(context).textTheme.titleSmall?.copyWith(letterSpacing: 0.6)),
             const SizedBox(height: 12),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text_styles.dart';
 
 /// Professional ParkinTrace logo — circular emblem with P + keyboard/waveform.
 /// Minimal, geometric, scalable at 24px to 128px.
@@ -9,56 +11,76 @@ class ParkinTraceLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF0F766E),
-                const Color(0xFF115E59),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(color: const Color(0xFF0F766E).withValues(alpha: 0.22), blurRadius: 12, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: CustomPaint(
-            painter: _LogoPainter(),
-            child: Center(
-              child: Text('P',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: size * 0.42,
-                      fontWeight: FontWeight.w800,
-                      height: 1,
-                      letterSpacing: -0.5)),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? AppColors.textLight : AppColors.ink;
+    final quiet = isDark ? AppColors.mute : AppColors.body;
+
+    final emblem = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[AppColors.brand, AppColors.brandDeep],
+        ),
+        // Hairline rim instead of a glow: the system allows no glows.
+        border: Border.all(color: AppColors.onPrimary.withValues(alpha: 0.14)),
+      ),
+      child: CustomPaint(
+        painter: _LogoPainter(),
+        child: Center(
+          child: Text(
+            'P',
+            style: TextStyle(
+              color: AppColors.onPrimary,
+              fontSize: size * 0.44,
+              fontWeight: FontWeight.w600,
+              height: 1,
+              letterSpacing: -0.5,
             ),
           ),
         ),
-        if (showWordmark) ...[
-          const SizedBox(width: 10),
-          Column(
+      ),
+    );
+
+    if (!showWordmark) return emblem;
+
+    // Flexible so a long tagline wraps inside the sidebar rather than
+    // overflowing it.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        emblem,
+        SizedBox(width: size * 0.24),
+        Flexible(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('ParkinTrace',
-                  style: TextStyle(
-                      fontSize: size * 0.32,
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(context).textTheme.titleSmall?.color,
-                      height: 1)),
-              Text('Typing patterns for Parkinson\'s monitoring',
-                  style: TextStyle(fontSize: size * 0.14, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7))),
+            children: <Widget>[
+              Text(
+                'ParkinTrace',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.headingSm.copyWith(
+                  fontSize: (size * 0.34).clamp(14.0, 22.0),
+                  color: ink,
+                  letterSpacing: -0.6,
+                ),
+              ),
+              Text(
+                "Typing patterns for Parkinson's monitoring",
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySm.copyWith(
+                  fontSize: (size * 0.16).clamp(9.5, 13.0),
+                  color: quiet,
+                ),
+              ),
             ],
           ),
-        ],
+        ),
       ],
     );
   }

@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/providers/analysis_mode_provider.dart';
 import '../../../core/providers/app_mode_provider.dart';
 import '../../../data/models/typing_session.dart';
@@ -272,7 +274,7 @@ class _StructuredTypingScreenState
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: AppSpacing.screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -313,7 +315,7 @@ class _StructuredTypingScreenState
                   const SizedBox(height: 16),
                   // Centered paragraph — faded initially, bright as typed
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: AppSpacing.cardPadding,
                     decoration: BoxDecoration(
                       color: Theme.of(context).cardTheme.color,
                       borderRadius: BorderRadius.circular(12),
@@ -341,7 +343,7 @@ class _StructuredTypingScreenState
                   ),
                   if (!_isPassageComplete)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(top: AppSpacing.sm),
                       child: Text(
                         'Keep typing — finish the passage to enable Done. Extra trailing spaces are ignored.',
                         style: Theme.of(context).textTheme.bodySmall,
@@ -349,7 +351,7 @@ class _StructuredTypingScreenState
                     ),
                   if (_isPassageComplete && !_canDone)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(top: AppSpacing.sm),
                       child: Text(
                         'Passage complete — need ${AppConstants.minKeyEvents} keys to save.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -360,7 +362,7 @@ class _StructuredTypingScreenState
                   const Spacer(),
                   if (_saving)
                     const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
+                      padding: EdgeInsets.only(bottom: AppSpacing.smMd),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -376,7 +378,7 @@ class _StructuredTypingScreenState
                     ),
                   if (_analyzing && !_saving)
                     const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
+                      padding: EdgeInsets.only(bottom: AppSpacing.smMd),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -392,17 +394,17 @@ class _StructuredTypingScreenState
                     ),
                   if (_saveError != null)
                     Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: AppSpacing.smMd),
+                      padding: const EdgeInsets.all(AppSpacing.smMd),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
+                        color: AppColors.errorBannerBackground,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
                         children: [
                           Text(
                             _saveError!,
-                            style: const TextStyle(color: Color(0xFF991B1B)),
+                            style: const TextStyle(color: AppColors.errorBannerText),
                           ),
                           const SizedBox(height: 8),
                           Row(

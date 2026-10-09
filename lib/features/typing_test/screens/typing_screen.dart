@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/layout/top_bar.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/providers/analysis_mode_provider.dart';
 import '../../../shared/widgets/design_system.dart';
 import '../../../shared/widgets/gradient_background.dart';
@@ -32,7 +33,7 @@ class TypingScreen extends ConsumerWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
             child: ListView(
-              padding: const EdgeInsets.all(24),
+              padding: AppSpacing.screenPadding,
               children: [
                 const SectionHeader(
                   title: 'What would you like to do?',
@@ -90,7 +91,7 @@ class _TypeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: GlassCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

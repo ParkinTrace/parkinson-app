@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../auth/providers/auth_provider.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/design_system.dart';
+import '../../../shared/widgets/gradient_background.dart';
+import '../../../shared/widgets/motion.dart';
 import '../../../shared/widgets/parkin_trace_logo.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
@@ -23,30 +28,51 @@ class SplashScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const ParkinTraceLogo(size: 96),
-              const SizedBox(height: 24),
-              Text('ParkinTrace', style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 36)),
-              const SizedBox(height: 8),
-              Text("Typing patterns for Parkinson's monitoring",
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).textTheme.bodySmall?.color),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 40),
-              SizedBox(
-                width: 180,
-                child: ElevatedButton(
-                  onPressed: () => _onBegin(context, ref),
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  child: const Text('BEGIN', style: TextStyle(letterSpacing: 1.2, fontWeight: FontWeight.w700)),
+      body: GradientBackground(
+        mesh: true,
+        meshHeight: 520,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                FadeSlideIn(child: const ParkinTraceLogo(size: 88)),
+                const SizedBox(height: AppSpacing.lg),
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 90),
+                  child: Column(
+                    children: <Widget>[
+                      const MonoEyebrow('Research preview'),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text('ParkinTrace', style: AppTextStyles.headingLg),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.sm),
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 150),
+                  child: Text(
+                    "Typing patterns for Parkinson's monitoring",
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl2),
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 210),
+                  child: SizedBox(
+                    width: 220,
+                    child: PrimaryButton(
+                      label: 'BEGIN',
+                      onPressed: () => _onBegin(context, ref),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

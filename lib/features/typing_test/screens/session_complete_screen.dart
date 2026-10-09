@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/typing_session.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_background.dart';
@@ -30,7 +31,7 @@ class SessionCompleteScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Session complete')),
       body: GradientBackground(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.cardPadding,
           children: [
             GlassCard(
               child: Column(
@@ -46,7 +47,7 @@ class SessionCompleteScreen extends ConsumerWidget {
                   ),
                   if (isPractice)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(top: AppSpacing.sm),
                       child: Text(
                         'Practice is never scored. '
                         '${fam.completedPracticeSessions}/${fam.requiredSessions} practice done.',
@@ -153,7 +154,7 @@ class SessionCompleteScreen extends ConsumerWidget {
               child: const Text('Type again'),
             ),
             const Padding(
-              padding: EdgeInsets.only(top: 8),
+              padding: EdgeInsets.only(top: AppSpacing.sm),
               child: Text(
                 'This is not a medical diagnosis. For information only.',
                 textAlign: TextAlign.center,

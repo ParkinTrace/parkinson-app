@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/top_bar.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/design_system.dart';
 import '../../../shared/widgets/gradient_background.dart';
 
@@ -33,7 +34,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxW),
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
               children: [
                 // Logo consistency
                 Row(
@@ -144,7 +145,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
                 ),
                 if (!_canContinue)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
                     child: Text(
                       'Please check the required consent to continue.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(

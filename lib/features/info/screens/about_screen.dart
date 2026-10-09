@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/layout/top_bar.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 
@@ -14,7 +15,7 @@ class AboutScreen extends StatelessWidget {
       appBar: const AppTopBar(title: 'How it works'),
       body: GradientBackground(
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: AppSpacing.screenPadding,
           children: [
             Text(
               'What this app does',
@@ -89,7 +90,7 @@ class _StepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpacing.smMd),
       child: GlassCard(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,

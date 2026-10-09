@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../../../core/layout/top_bar.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_colors.dart';
 
 import '../../../shared/widgets/gradient_background.dart';
@@ -32,7 +33,7 @@ class Layer1ResultScreen extends ConsumerWidget {
       ),
       body: GradientBackground(
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: AppSpacing.screenPadding,
           children: [
             if (layer1 == null)
               GlassCard(
@@ -55,7 +56,7 @@ class Layer1ResultScreen extends ConsumerWidget {
             else ...[
               if (isDemo)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
                     'Sample / Demo Data',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -65,7 +66,7 @@ class Layer1ResultScreen extends ConsumerWidget {
                   ),
                 ),
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(AppSpacing.smMd + 8),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),

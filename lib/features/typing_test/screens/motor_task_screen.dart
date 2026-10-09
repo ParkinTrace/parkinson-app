@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../providers/motor_task_provider.dart';
 
 /// Short alternating-key task (Stage 2.3, 10-15 s).
@@ -71,7 +72,7 @@ class _MotorTaskScreenState extends ConsumerState<MotorTaskScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Motor task')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: AppSpacing.screenPadding,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

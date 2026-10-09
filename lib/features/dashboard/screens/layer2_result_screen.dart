@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/top_bar.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/design_system.dart';
@@ -29,7 +30,7 @@ class Layer2ResultScreen extends ConsumerWidget {
       appBar: const AppTopBar(title: 'Your personal typing patterns', subtitle: 'Layer 2 · Personal Monitoring'),
       body: GradientBackground(
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: AppSpacing.screenPadding,
           children: [
             GlassCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

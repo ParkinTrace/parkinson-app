@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_spacing.dart';
 import '../../../data/services/keystroke_capture_service.dart';
 import '../widgets/notepad_area.dart';
 
@@ -66,7 +67,7 @@ class _FreeTypingScreenState extends ConsumerState<FreeTypingScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Free typing')),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           children: [
             Row(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/analysis_mode_provider.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../data/repositories/session_repository.dart';
 
 /// Session history (Stage 7.4 shell). Live backend stream when ready,
@@ -28,7 +29,7 @@ class HistoryScreen extends ConsumerWidget {
             return Center(child: Text(mode == AnalysisMode.layer2 ? 'No monitoring sessions yet.' : 'No sessions yet.'));
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.cardPadding,
             itemCount: sessions.length,
             itemBuilder: (context, i) {
               final s = sessions[i];

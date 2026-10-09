@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_spacing.dart';
 
 class BaselineProgress extends StatelessWidget {
   final int screeningSessions;
@@ -11,7 +12,7 @@ class BaselineProgress extends StatelessWidget {
     final fraction = (screeningSessions / total).clamp(0.0, 1.0);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

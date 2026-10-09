@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/app_mode_provider.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/design_system.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/parkin_trace_logo.dart';
@@ -84,12 +86,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: GradientBackground(
+        mesh: true,
+        meshHeight: 520,
         child: Center(
           child: SingleChildScrollView(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: AppSpacing.screenPadding,
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -131,7 +135,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 12),
                         Text(
                           _error!,
-                          style: const TextStyle(color: Colors.orange),
+                          style: const TextStyle(color: AppColors.error),
                         ),
                       ],
                       const SizedBox(height: 20),

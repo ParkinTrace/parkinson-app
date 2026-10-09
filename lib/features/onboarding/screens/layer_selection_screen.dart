@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/analysis_mode_provider.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/layout/top_bar.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
@@ -22,7 +23,7 @@ class LayerSelectionScreen extends ConsumerWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: AppSpacing.screenPadding,
               child: Column(
                 children: [
                   const SizedBox(height: 8),

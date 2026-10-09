@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/user_profile.dart';
 import '../../profile/providers/profile_context_provider.dart';
 
@@ -39,7 +40,7 @@ class _DemographicsScreenState extends ConsumerState<DemographicsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('About you')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: AppSpacing.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

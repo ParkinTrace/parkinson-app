@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radii.dart';
 import '../../core/providers/analysis_mode_provider.dart';
 import '../../core/providers/app_mode_provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_motion.dart';
+import '../../core/theme/app_radii.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_text_styles.dart';
 import '../../shared/widgets/parkin_trace_logo.dart';
 
 class AppSidebar extends ConsumerWidget {
@@ -24,64 +27,69 @@ class AppSidebar extends ConsumerWidget {
     final isDemo = ref.watch(appModeProvider).isDemo;
     final analysisMode = ref.watch(analysisModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hairline = Theme.of(context).dividerColor;
+    final quiet = Theme.of(context).textTheme.bodySmall?.color;
+    final chipSurface =
+        isDark ? AppColors.surfaceDarkElevated : AppColors.canvasElevated;
     return Container(
       width: 260,
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        border: Border(
-          right: BorderSide(color: Theme.of(context).dividerColor),
-        ),
+        // Canvas, not white: hairline structure separates nav from content.
+        color: isDark ? AppColors.backgroundDark : AppColors.canvas,
+        border: Border(right: BorderSide(color: hairline)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Brand — ParkinTrace
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-            child: const ParkinTraceLogo(size: 36, showWordmark: true),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.smMd,
+            ),
+            child: const ParkinTraceLogo(size: 34, showWordmark: true),
           ),
           if (analysisMode != null)
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.smMd),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 6,
+              ),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-                borderRadius: AppRadii.radiusMd,
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                color: chipSurface,
+                borderRadius: AppRadii.radiusSm,
+                border: Border.all(color: hairline),
               ),
               child: Text(
-                analysisMode == AnalysisMode.layer1 ? 'LAYER 1 · Quick Analysis' : 'LAYER 2 · Personal Monitoring',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+                analysisMode == AnalysisMode.layer1
+                    ? 'LAYER 1 · QUICK ANALYSIS'
+                    : 'LAYER 2 · PERSONAL MONITORING',
+                style: AppTextStyles.monoEyebrow.copyWith(color: quiet),
                 textAlign: TextAlign.center,
               ),
             ),
           const SizedBox(height: 8),
           if (isDemo)
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.smMd),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 6,
+              ),
               decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.18),
-                borderRadius: AppRadii.radiusMd,
-                border: Border.all(
-                  color: AppColors.accent.withValues(alpha: 0.4),
-                ),
+                color: chipSurface,
+                borderRadius: AppRadii.radiusSm,
+                border: Border.all(color: hairline),
               ),
               child: Row(
-                children: [
-                  const Icon(Icons.science_outlined, size: 14),
+                children: <Widget>[
+                  Icon(Icons.science_outlined, size: 12, color: quiet),
                   const SizedBox(width: 6),
                   Text(
-                    'DEMO MODE',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.4,
-                    ),
+                    'DEMO',
+                    style: AppTextStyles.monoEyebrow.copyWith(color: quiet),
                   ),
                   const Spacer(),
                   Text(
@@ -118,10 +126,11 @@ class AppSidebar extends ConsumerWidget {
             ),
           const SizedBox(height: 16),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text('ANALYSIS MODES',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 0.6, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6))),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Text(
+              'ANALYSIS MODES',
+              style: AppTextStyles.monoEyebrow.copyWith(color: quiet),
+            ),
           ),
           const SizedBox(height: 8),
           _LayerModeButton(
@@ -179,14 +188,10 @@ class AppSidebar extends ConsumerWidget {
                       child: const Text('Settings'),
                     ),
                   ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   'v1.0 · Research preview',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                  ),
+                  style: AppTextStyles.monoEyebrow.copyWith(color: quiet),
                 ),
               ],
             ),
@@ -213,22 +218,59 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? AppColors.textLight : AppColors.ink;
+    final quiet = isDark ? AppColors.mute : AppColors.body;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: Material(
-        color: selected ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
-        borderRadius: AppRadii.radiusMd,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AppRadii.radiusMd,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                Icon(selected ? activeIcon : icon, size: 20, color: selected ? AppColors.primary : null),
-                const SizedBox(width: 10),
-                Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: selected ? FontWeight.w600 : FontWeight.w400, color: selected ? AppColors.primary : null)),
-              ],
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      // AnimatedContainer, not Material: selection slides in rather than
+      // snapping, which is what makes the nav feel responsive.
+      child: AnimatedContainer(
+        duration: AppMotion.effective(context, AppMotion.fast),
+        curve: AppMotion.standard,
+        decoration: BoxDecoration(
+          color: selected
+              ? Theme.of(context).dividerColor.withValues(alpha: 0.5)
+              : Colors.transparent,
+          borderRadius: AppRadii.radiusSm,
+          border: Border.all(
+            color: selected
+                ? Theme.of(context).dividerColor
+                : Colors.transparent,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: AppRadii.radiusSm,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: AppRadii.radiusSm,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.smMd,
+                vertical: 10,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    selected ? activeIcon : icon,
+                    size: 18,
+                    color: selected ? ink : quiet,
+                  ),
+                  const SizedBox(width: AppSpacing.smMd),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight:
+                              selected ? FontWeight.w500 : FontWeight.w400,
+                          color: selected ? ink : quiet,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -247,25 +289,73 @@ class _LayerModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? AppColors.textLight : AppColors.ink;
+    final quiet = isDark ? AppColors.mute : AppColors.body;
+    // Brand teal is the single accent here; the emerald stays reserved for
+    // health status, so a selected mode never reads as a clinical signal.
+    final accent = isDark ? AppColors.brandLight : AppColors.brand;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: Material(
-        color: selected ? const Color(0xFF10B981).withValues(alpha: 0.14) : Colors.transparent,
-        borderRadius: AppRadii.radiusMd,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AppRadii.radiusMd,
-          child: Container(
-            decoration: selected ? BoxDecoration(border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)), borderRadius: AppRadii.radiusMd) : null,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(children: [
-              Icon(icon, size: 18, color: selected ? const Color(0xFF10B981) : null),
-              const SizedBox(width: 10),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? const Color(0xFF10B981) : null, fontSize: 13)),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7))),
-              ]),
-            ]),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      child: AnimatedContainer(
+        duration: AppMotion.effective(context, AppMotion.fast),
+        curve: AppMotion.standard,
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.06) : Colors.transparent,
+          borderRadius: AppRadii.radiusSm,
+          border: Border.all(
+            color:
+                selected ? accent.withValues(alpha: 0.35) : Colors.transparent,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: AppRadii.radiusSm,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: AppRadii.radiusSm,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.smMd,
+                vertical: 10,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(icon, size: 16, color: selected ? accent : quiet),
+                  const SizedBox(width: AppSpacing.smMd),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          label,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                fontWeight: selected
+                                    ? FontWeight.w500
+                                    : FontWeight.w400,
+                                color: selected ? ink : quiet,
+                                fontSize: 13,
+                              ),
+                        ),
+                        Text(
+                          subtitle,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(fontSize: 11, color: quiet),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

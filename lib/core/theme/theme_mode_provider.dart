@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// ThemeMode with persistence (calm dark default, light/day toggle).
+/// ThemeMode with persistence.
+///
+/// Light is the default because the system is designed light-first; dark mode
+/// inverts the same ink-on-canvas ladder rather than defining a second theme.
 /// Stored as int index in ThemeMode.values.
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   static const _key = 'theme_mode_v1';

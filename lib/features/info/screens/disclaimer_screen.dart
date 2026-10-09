@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_spacing.dart';
 
 /// Medical disclaimer (Stage 9.1, plan-exact wording).
 class DisclaimerScreen extends StatelessWidget {
@@ -9,7 +10,7 @@ class DisclaimerScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Disclaimer')),
       body: const Padding(
-        padding: EdgeInsets.all(24),
+        padding: AppSpacing.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

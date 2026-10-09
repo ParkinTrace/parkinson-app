@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/top_bar.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/providers/app_mode_provider.dart';
 import '../../../data/repositories/session_repository.dart';
 import '../../../shared/widgets/design_system.dart';
@@ -39,7 +40,7 @@ class ProfileScreen extends ConsumerWidget {
       ),
       body: GradientBackground(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.cardPadding,
           children: [
             if (isDemo)
               Card(

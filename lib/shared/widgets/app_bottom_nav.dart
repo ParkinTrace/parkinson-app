@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 
 /// Bottom navigation bar with the 4 plan tabs:
 /// Home, Type, Insights, Profile.
+///
+/// Edged with the same hairline as every card, so the bar reads as part of the
+/// page rather than a floating chrome slab.
 class AppBottomNav extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   const AppBottomNav({super.key, required this.navigationShell});
@@ -16,31 +19,36 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationBar(
-      selectedIndex: navigationShell.currentIndex,
-      onDestinationSelected: _onTap,
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.keyboard_outlined),
-          selectedIcon: Icon(Icons.keyboard),
-          label: 'Type',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.insights_outlined),
-          selectedIcon: Icon(Icons.insights),
-          label: 'Insights',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          selectedIcon: Icon(Icons.person),
-          label: 'Profile',
-        ),
-      ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: NavigationBar(
+        selectedIndex: navigationShell.currentIndex,
+        onDestinationSelected: _onTap,
+        destinations: const <NavigationDestination>[
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.keyboard_outlined),
+            selectedIcon: Icon(Icons.keyboard),
+            label: 'Type',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights),
+            label: 'Insights',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 }

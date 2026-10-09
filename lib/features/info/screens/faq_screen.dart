@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_spacing.dart';
 
 /// Common questions (Stage 9.1/9.4 language rules apply throughout).
 class FaqScreen extends StatelessWidget {
@@ -41,7 +42,7 @@ class FaqScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('FAQ')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         children: [
           for (final (q, a) in _items)
             Card(

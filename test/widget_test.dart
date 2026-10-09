@@ -7,7 +7,11 @@ void main() {
   testWidgets('App boots to ParkinTrace BEGIN when signed out',
       (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: ParkinsonApp()));
-    await tester.pumpAndSettle();
+
+    // The launch screen hosts the ambient mesh gradient, which repeats forever,
+    // so pumpAndSettle would never settle. Pump fixed frames instead.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
 
     expect(find.text('ParkinTrace'), findsWidgets);
     expect(find.text('BEGIN'), findsOneWidget);

@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_spacing.dart';
 
 /// Per-feature sparkline using last 10 sessions.
 /// Expects values oldest-first. Empty -> placeholder.
@@ -19,7 +20,7 @@ class MetricTrendChart extends StatelessWidget {
     if (values.length < 2) {
       return Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.cardPadding,
           child: Text('$featureLabel — not enough history yet'),
         ),
       );
@@ -30,7 +31,7 @@ class MetricTrendChart extends StatelessWidget {
     final median = baselineMedian;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

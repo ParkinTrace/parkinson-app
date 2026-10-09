@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/analysis_mode_provider.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 import '../../../data/repositories/session_repository.dart';
 import '../../checkin/providers/checkin_provider.dart';
@@ -88,11 +89,12 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         children: [
           ListTile(
             title: const Text('Theme'),
-            subtitle: const Text('Dark is calmer for patients; light/day also available'),
+            subtitle: const Text(
+                'Light is the default; dark inverts the same ink-on-canvas system'),
             trailing: DropdownButton<ThemeMode>(
               value: ref.watch(themeModeProvider),
               items: const [

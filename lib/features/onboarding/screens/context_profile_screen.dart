@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/user_profile.dart';
 import '../../profile/providers/profile_context_provider.dart';
 
@@ -47,7 +48,7 @@ class _ContextProfileScreenState extends ConsumerState<ContextProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('How are you using this app?')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: AppSpacing.screenPadding,
         child: ListView(
           children: [
             RadioGroup<MonitoringProfileType>(

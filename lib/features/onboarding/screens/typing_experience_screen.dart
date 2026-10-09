@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/user_profile.dart';
 import '../../typing_test/providers/familiarization_provider.dart';
 import '../widgets/onboarding_scaffold.dart';
@@ -39,7 +40,7 @@ class _TypingExperienceScreenState extends ConsumerState<TypingExperienceScreen>
         children: [
           for (final level in TypingExperienceLevel.values)
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: AppSpacing.smMd),
               child: Card(
                 color: _selected == level ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08) : null,
                 shape: RoundedRectangleBorder(

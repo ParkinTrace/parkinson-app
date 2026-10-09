@@ -73,6 +73,27 @@ flutter:
   assets:
     - assets/prompts/neutral_sentences.json
 
+    # Geist is not shipped by google_fonts, so the system uses the substitutes
+    # the spec sanctions: Inter for Geist Sans, JetBrains Mono for Geist Mono.
+    #
+    # These are bundled rather than fetched at runtime. google_fonts looks for
+    # '<Family>-<Variant>.ttf' in the asset manifest before it ever considers
+    # the network, so bundling keeps typography deterministic and lets the app
+    # render correctly offline. The file NAMES are the lookup key — do not
+    # rename them. Note the mono family key has no space ('JetBrainsMono'),
+    # unlike the 'JetBrains Mono' display name. Any change here must also
+    # update the guard in test/screenshot_harness_test.dart.
+    #
+    # Licensed under the SIL Open Font License 1.1:
+    #   assets/fonts/Inter-LICENSE.txt
+    #   assets/fonts/JetBrainsMono-LICENSE.txt
+    - assets/fonts/Inter-Regular.ttf
+    - assets/fonts/Inter-Medium.ttf
+    - assets/fonts/Inter-SemiBold.ttf
+    - assets/fonts/JetBrainsMono-Regular.ttf
+    - assets/fonts/JetBrainsMono-Medium.ttf
+    - assets/fonts/JetBrainsMono-SemiBold.ttf
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

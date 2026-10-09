@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/analysis_mode_provider.dart';
 import '../../../core/providers/app_mode_provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../data/repositories/session_repository.dart';
 import '../../../data/services/demo_data_service.dart';
 import '../../../shared/widgets/design_system.dart';
@@ -175,7 +176,7 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Home')),
       body: GradientBackground(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.cardPadding,
           children: [
             Text(
               '${_greeting()}!',
@@ -183,9 +184,9 @@ class DashboardScreen extends ConsumerWidget {
             ),
             if (ref.watch(analysisModeProvider) != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: AppSpacing.xs),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
@@ -203,7 +204,7 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             // Layer switcher — visible on Home per spec 19
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.smMd, vertical: AppSpacing.sm),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(8),
