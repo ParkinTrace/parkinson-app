@@ -1,28 +1,55 @@
-Dataset,Model,Metric,Old Score,Old Std,New Score,New Std,Absolute Change (pp),Raw Absolute Change,Relative Change (%),Folds Improved,Consistent
-neuroqwerty,Random Forest,ROC-AUC,0.8011,0.0719,0.8154,0.0825,1.43,0.0143,1.78,3/5,Mixed
-neuroqwerty,Random Forest,Average Precision,0.867,0.0394,0.8795,0.0415,1.25,0.0125,1.44,3/5,Mixed
-neuroqwerty,Random Forest,Accuracy,0.7518,0.063,0.7256,0.0534,-2.62,-0.0262,-3.48,1/5,No
-neuroqwerty,Random Forest,Balanced Accuracy,0.7469,0.063,0.7325,0.0538,-1.45,-0.0145,-1.94,1/5,No
-neuroqwerty,Random Forest,F1-Score,0.7373,0.0451,0.7111,0.0182,-2.62,-0.0262,-3.56,1/5,No
-neuroqwerty,Random Forest,Sensitivity (Recall),0.6764,0.0384,0.6575,0.0654,-1.9,-0.019,-2.8,1/5,No
-neuroqwerty,Random Forest,Specificity,0.8174,0.1398,0.8074,0.1369,-1.0,-0.01,-1.22,1/5,No
-neuroqwerty,Random Forest,Precision,0.8174,0.0892,0.7972,0.1067,-2.02,-0.0202,-2.47,1/5,No
-neuroqwerty,Random Forest,Brier Score,0.1773,0.0291,0.2018,0.0038,0.02,0.0245,13.8,1/5,No
-tappy,Random Forest,ROC-AUC,0.4738,0.0895,0.4505,0.1049,-2.33,-0.0233,-4.92,3/5,Mixed
-tappy,Random Forest,Average Precision,0.7721,0.0849,0.7353,0.1037,-3.69,-0.0369,-4.78,1/5,No
-tappy,Random Forest,Accuracy,0.6091,0.0594,0.6784,0.1002,6.93,0.0693,11.37,3/5,Mixed
-tappy,Random Forest,Balanced Accuracy,0.4738,0.0629,0.4614,0.0482,-1.25,-0.0125,-2.63,2/5,No
-tappy,Random Forest,F1-Score,0.7388,0.0483,0.7974,0.0769,5.87,0.0587,7.94,3/5,Mixed
-tappy,Random Forest,Sensitivity (Recall),0.7302,0.0809,0.8539,0.1072,12.36,0.1236,16.93,4/5,Yes
-tappy,Random Forest,Specificity,0.2174,0.1063,0.0689,0.0789,-14.85,-0.1485,-68.33,0/5,No
-tappy,Random Forest,Precision,0.7544,0.0518,0.7497,0.0567,-0.47,-0.0047,-0.62,2/5,No
-tappy,Random Forest,Brier Score,0.2466,0.0308,0.1838,0.0328,-0.06,-0.0628,-25.47,5/5,Yes
-pooled,Random Forest,ROC-AUC,0.6399,0.0249,0.5139,0.044,-12.6,-0.126,-19.7,0/5,No
-pooled,Random Forest,Average Precision,0.8156,0.0481,0.7375,0.0686,-7.81,-0.0781,-9.57,0/5,No
-pooled,Random Forest,Accuracy,0.6508,0.0467,0.5756,0.0309,-7.52,-0.0752,-11.55,0/5,No
-pooled,Random Forest,Balanced Accuracy,0.5897,0.0504,0.4986,0.0309,-9.11,-0.0911,-15.45,0/5,No
-pooled,Random Forest,F1-Score,0.7507,0.0429,0.692,0.0356,-5.87,-0.0587,-7.82,0/5,No
-pooled,Random Forest,Sensitivity (Recall),0.7367,0.0262,0.667,0.042,-6.97,-0.0697,-9.46,1/5,No
-pooled,Random Forest,Specificity,0.4428,0.0815,0.3302,0.0528,-11.26,-0.1126,-25.43,0/5,No
-pooled,Random Forest,Precision,0.7684,0.0768,0.723,0.062,-4.54,-0.0454,-5.91,0/5,No
-pooled,Random Forest,Brier Score,0.213,0.0139,0.2054,0.0291,-0.01,-0.0077,-3.6,3/5,Mixed
+Dataset,Metric,Metric Type,Old Score,New Score,Absolute Change,Relative Change (%),Folds Improved,Fold Consistency
+neuroqwerty,ROC-AUC (Row-Level),independent,0.7982,0.7771,-2.1131,-2.65,N/A,N/A
+neuroqwerty,ROC-AUC (Subject-Level),independent,0.7935,0.7719,-2.1595,-2.72,N/A,N/A
+neuroqwerty,ROC-AUC (Fold Mean),independent,0.8011,0.8154,1.4289,1.78,3/5,Mixed
+neuroqwerty,PR-AUC / Avg Precision (Row-Level),independent,0.8529,0.8425,-1.0394,-1.22,N/A,N/A
+neuroqwerty,PR-AUC (Subject-Level),independent,0.8401,0.8283,-1.1796,-1.4,N/A,N/A
+neuroqwerty,Brier Score (Uncalibrated -> Calibrated),calibration,0.1773,0.2017,0.0243,13.72,N/A,N/A
+neuroqwerty,Brier Score (Fold Mean),calibration,0.1773,0.2018,0.0245,13.8,1/5,No
+neuroqwerty,Accuracy (Fixed t=0.50),dependent (t=0.50),0.75,0.75,0.0,0.0,N/A,N/A
+neuroqwerty,Accuracy (Tuned t_opt),dependent (tuned t),0.75,0.7241,-2.5862,-3.45,N/A,N/A
+neuroqwerty,Balanced Accuracy (Fixed t=0.50),dependent (t=0.50),0.7524,0.75,-0.2381,-0.32,N/A,N/A
+neuroqwerty,Balanced Accuracy (Tuned t_opt),dependent (tuned t),0.7524,0.7268,-2.5595,-3.4,N/A,N/A
+neuroqwerty,F1-Score (Fixed t=0.50),dependent (t=0.50),0.7387,0.7563,1.7564,2.38,N/A,N/A
+neuroqwerty,F1-Score (Tuned t_opt),dependent (tuned t),0.7387,0.7091,-2.9648,-4.01,N/A,N/A
+neuroqwerty,Sensitivity / Recall (Fixed t=0.50),dependent (t=0.50),0.6833,0.75,6.6667,9.76,N/A,N/A
+neuroqwerty,Specificity (Fixed t=0.50),dependent (t=0.50),0.8214,0.75,-7.1429,-8.7,N/A,N/A
+neuroqwerty,Specificity (Tuned t_opt),dependent (tuned t),0.8214,0.8036,-1.7857,-2.17,N/A,N/A
+neuroqwerty,Subject-Level Accuracy (t=0.50),subject-level,0.7294,0.7529,2.3529,3.23,N/A,N/A
+neuroqwerty,Subject-Level Balanced Acc (t=0.50),subject-level,0.7284,0.7525,2.4086,3.31,N/A,N/A
+tappy,ROC-AUC (Row-Level),independent,0.4526,0.4191,-3.3449,-7.39,N/A,N/A
+tappy,ROC-AUC (Subject-Level),independent,0.4406,0.4564,1.5823,3.59,N/A,N/A
+tappy,ROC-AUC (Fold Mean),independent,0.4738,0.4505,-2.3322,-4.92,3/5,Mixed
+tappy,PR-AUC / Avg Precision (Row-Level),independent,0.749,0.6972,-5.1779,-6.91,N/A,N/A
+tappy,PR-AUC (Subject-Level),independent,0.7396,0.7118,-2.7818,-3.76,N/A,N/A
+tappy,Brier Score (Uncalibrated -> Calibrated),calibration,0.2491,0.1851,-0.064,-25.7,N/A,N/A
+tappy,Brier Score (Fold Mean),calibration,0.2466,0.1838,-0.0628,-25.47,5/5,Yes
+tappy,Accuracy (Fixed t=0.50),dependent (t=0.50),0.6105,0.7645,15.3986,25.22,N/A,N/A
+tappy,Accuracy (Tuned t_opt),dependent (tuned t),0.6105,0.6812,7.0652,11.57,N/A,N/A
+tappy,Balanced Accuracy (Fixed t=0.50),dependent (t=0.50),0.4791,0.5,2.0871,4.36,N/A,N/A
+tappy,Balanced Accuracy (Tuned t_opt),dependent (tuned t),0.4791,0.4774,-0.1695,-0.35,N/A,N/A
+tappy,F1-Score (Fixed t=0.50),dependent (t=0.50),0.7407,0.8665,12.5878,17.0,N/A,N/A
+tappy,F1-Score (Tuned t_opt),dependent (tuned t),0.7407,0.8053,6.4658,8.73,N/A,N/A
+tappy,Sensitivity / Recall (Fixed t=0.50),dependent (t=0.50),0.7275,1.0,27.2512,37.46,N/A,N/A
+tappy,Specificity (Fixed t=0.50),dependent (t=0.50),0.2308,0.0,-23.0769,-100.0,N/A,N/A
+tappy,Specificity (Tuned t_opt),dependent (tuned t),0.2308,0.0923,-13.8462,-60.0,N/A,N/A
+tappy,Subject-Level Accuracy (t=0.50),subject-level,0.5896,0.7453,15.566,26.4,N/A,N/A
+tappy,Subject-Level Balanced Acc (t=0.50),subject-level,0.4626,0.5,3.7389,8.08,N/A,N/A
+pooled,ROC-AUC (Row-Level),independent,0.6342,0.5015,-13.268,-20.92,N/A,N/A
+pooled,ROC-AUC (Subject-Level),independent,0.6663,0.5517,-11.4639,-17.2,N/A,N/A
+pooled,ROC-AUC (Fold Mean),independent,0.6399,0.5139,-12.6036,-19.7,0/5,No
+pooled,PR-AUC / Avg Precision (Row-Level),independent,0.8085,0.73,-7.8539,-9.71,N/A,N/A
+pooled,PR-AUC (Subject-Level),independent,0.7919,0.7265,-6.5434,-8.26,N/A,N/A
+pooled,Brier Score (Uncalibrated -> Calibrated),calibration,0.2136,0.2056,-0.008,-3.75,N/A,N/A
+pooled,Brier Score (Fold Mean),calibration,0.213,0.2054,-0.0077,-3.6,3/5,Mixed
+pooled,Accuracy (Fixed t=0.50),dependent (t=0.50),0.6497,0.7201,7.0359,10.83,N/A,N/A
+pooled,Accuracy (Tuned t_opt),dependent (tuned t),0.6497,0.5734,-7.6347,-11.75,N/A,N/A
+pooled,Balanced Accuracy (Fixed t=0.50),dependent (t=0.50),0.5806,0.499,-8.166,-14.06,N/A,N/A
+pooled,Balanced Accuracy (Tuned t_opt),dependent (tuned t),0.5806,0.5013,-7.9318,-13.66,N/A,N/A
+pooled,F1-Score (Fixed t=0.50),dependent (t=0.50),0.7521,0.8372,8.5131,11.32,N/A,N/A
+pooled,F1-Score (Tuned t_opt),dependent (tuned t),0.7521,0.6919,-6.0227,-8.01,N/A,N/A
+pooled,Sensitivity / Recall (Fixed t=0.50),dependent (t=0.50),0.7365,0.9979,26.1411,35.49,N/A,N/A
+pooled,Specificity (Fixed t=0.50),dependent (t=0.50),0.4247,0.0,-42.4731,-100.0,N/A,N/A
+pooled,Specificity (Tuned t_opt),dependent (tuned t),0.4247,0.3387,-8.6022,-20.25,N/A,N/A
+pooled,Subject-Level Accuracy (t=0.50),subject-level,0.6397,0.67,3.0303,4.74,N/A,N/A
+pooled,Subject-Level Balanced Acc (t=0.50),subject-level,0.5998,0.4975,-10.2268,-17.05,N/A,N/A
