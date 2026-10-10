@@ -1,0 +1,28 @@
+Dataset,Model,Metric,Old Score,Old Std,New Score,New Std,Absolute Change (pp),Raw Absolute Change,Relative Change (%),Folds Improved,Consistent
+neuroqwerty,Random Forest,ROC-AUC,0.8011,0.0719,0.8154,0.0825,1.43,0.0143,1.78,3/5,Mixed
+neuroqwerty,Random Forest,Average Precision,0.867,0.0394,0.8795,0.0415,1.25,0.0125,1.44,3/5,Mixed
+neuroqwerty,Random Forest,Accuracy,0.7518,0.063,0.7256,0.0534,-2.62,-0.0262,-3.48,1/5,No
+neuroqwerty,Random Forest,Balanced Accuracy,0.7469,0.063,0.7325,0.0538,-1.45,-0.0145,-1.94,1/5,No
+neuroqwerty,Random Forest,F1-Score,0.7373,0.0451,0.7111,0.0182,-2.62,-0.0262,-3.56,1/5,No
+neuroqwerty,Random Forest,Sensitivity (Recall),0.6764,0.0384,0.6575,0.0654,-1.9,-0.019,-2.8,1/5,No
+neuroqwerty,Random Forest,Specificity,0.8174,0.1398,0.8074,0.1369,-1.0,-0.01,-1.22,1/5,No
+neuroqwerty,Random Forest,Precision,0.8174,0.0892,0.7972,0.1067,-2.02,-0.0202,-2.47,1/5,No
+neuroqwerty,Random Forest,Brier Score,0.1773,0.0291,0.2018,0.0038,0.02,0.0245,13.8,1/5,No
+tappy,Random Forest,ROC-AUC,0.4738,0.0895,0.4505,0.1049,-2.33,-0.0233,-4.92,3/5,Mixed
+tappy,Random Forest,Average Precision,0.7721,0.0849,0.7353,0.1037,-3.69,-0.0369,-4.78,1/5,No
+tappy,Random Forest,Accuracy,0.6091,0.0594,0.6784,0.1002,6.93,0.0693,11.37,3/5,Mixed
+tappy,Random Forest,Balanced Accuracy,0.4738,0.0629,0.4614,0.0482,-1.25,-0.0125,-2.63,2/5,No
+tappy,Random Forest,F1-Score,0.7388,0.0483,0.7974,0.0769,5.87,0.0587,7.94,3/5,Mixed
+tappy,Random Forest,Sensitivity (Recall),0.7302,0.0809,0.8539,0.1072,12.36,0.1236,16.93,4/5,Yes
+tappy,Random Forest,Specificity,0.2174,0.1063,0.0689,0.0789,-14.85,-0.1485,-68.33,0/5,No
+tappy,Random Forest,Precision,0.7544,0.0518,0.7497,0.0567,-0.47,-0.0047,-0.62,2/5,No
+tappy,Random Forest,Brier Score,0.2466,0.0308,0.1838,0.0328,-0.06,-0.0628,-25.47,5/5,Yes
+pooled,Random Forest,ROC-AUC,0.6399,0.0249,0.5139,0.044,-12.6,-0.126,-19.7,0/5,No
+pooled,Random Forest,Average Precision,0.8156,0.0481,0.7375,0.0686,-7.81,-0.0781,-9.57,0/5,No
+pooled,Random Forest,Accuracy,0.6508,0.0467,0.5756,0.0309,-7.52,-0.0752,-11.55,0/5,No
+pooled,Random Forest,Balanced Accuracy,0.5897,0.0504,0.4986,0.0309,-9.11,-0.0911,-15.45,0/5,No
+pooled,Random Forest,F1-Score,0.7507,0.0429,0.692,0.0356,-5.87,-0.0587,-7.82,0/5,No
+pooled,Random Forest,Sensitivity (Recall),0.7367,0.0262,0.667,0.042,-6.97,-0.0697,-9.46,1/5,No
+pooled,Random Forest,Specificity,0.4428,0.0815,0.3302,0.0528,-11.26,-0.1126,-25.43,0/5,No
+pooled,Random Forest,Precision,0.7684,0.0768,0.723,0.062,-4.54,-0.0454,-5.91,0/5,No
+pooled,Random Forest,Brier Score,0.213,0.0139,0.2054,0.0291,-0.01,-0.0077,-3.6,3/5,Mixed
