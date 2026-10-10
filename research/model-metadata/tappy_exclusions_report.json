@@ -1,8 +1,23 @@
 {
   "total_raw_rows": 668,
-  "excluded_count": 8,
-  "remaining_clean_rows": 660,
+  "excluded_count": 17,
+  "remaining_clean_rows": 651,
   "exclusions": [
+    {
+      "row_index": 45,
+      "subject_id": "6YXFEMHYZI",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "6YXFEMHYZI_1703.txt",
+      "ht_mean": 145.28,
+      "left_ht_mean": 146.45,
+      "right_ht_mean": 144.5,
+      "ht_std": 1.5600000000000025,
+      "n_keystrokes": 5,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (5 < 10)"
+      ]
+    },
     {
       "row_index": 79,
       "subject_id": "927ZLCPEJM",
@@ -15,9 +30,39 @@
       "ht_std": 1853889.7664909635,
       "n_keystrokes": 2171,
       "exclusion_reasons": [
-        "ht_mean negative/zero (-39693.2ms)",
-        "left_ht_mean negative/zero (-69689.9ms)",
-        "ht_std extreme variance (1853889.8ms)"
+        "ht_mean negative/sub-minimum (-39693.2ms < 5.0ms)",
+        "left_ht_mean negative/sub-minimum (-69689.9ms < 5.0ms)",
+        "ht_std extreme variance (1853889.8ms > 1000ms)"
+      ]
+    },
+    {
+      "row_index": 91,
+      "subject_id": "9ZRBC5WOZR",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "9ZRBC5WOZR_1702.txt",
+      "ht_mean": 122.5625,
+      "left_ht_mean": 142.55,
+      "right_ht_mean": 115.9,
+      "ht_std": 24.076852862240944,
+      "n_keystrokes": 8,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (8 < 10)"
+      ]
+    },
+    {
+      "row_index": 124,
+      "subject_id": "BIGWMXFU3B",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "BIGWMXFU3B_1609.txt",
+      "ht_mean": 146.9,
+      "left_ht_mean": 156.3,
+      "right_ht_mean": 140.63333333333333,
+      "ht_std": 21.20216970029247,
+      "n_keystrokes": 5,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (5 < 10)"
       ]
     },
     {
@@ -32,7 +77,22 @@
       "ht_std": 1745.9338456710393,
       "n_keystrokes": 11205,
       "exclusion_reasons": [
-        "ht_std extreme variance (1745.9ms)"
+        "ht_std extreme variance (1745.9ms > 1000ms)"
+      ]
+    },
+    {
+      "row_index": 157,
+      "subject_id": "EBGLZDVO5S",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "EBGLZDVO5S_1609.txt",
+      "ht_mean": 220.7125,
+      "left_ht_mean": 199.225,
+      "right_ht_mean": 242.2,
+      "ht_std": 60.758609215073385,
+      "n_keystrokes": 8,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (8 < 10)"
       ]
     },
     {
@@ -47,9 +107,54 @@
       "ht_std": 3103576.806619164,
       "n_keystrokes": 774,
       "exclusion_reasons": [
-        "ht_mean negative/zero (-111484.1ms)",
-        "left_ht_mean negative/zero (-208551.6ms)",
-        "ht_std extreme variance (3103576.8ms)"
+        "ht_mean negative/sub-minimum (-111484.1ms < 5.0ms)",
+        "left_ht_mean negative/sub-minimum (-208551.6ms < 5.0ms)",
+        "ht_std extreme variance (3103576.8ms > 1000ms)"
+      ]
+    },
+    {
+      "row_index": 230,
+      "subject_id": "HYGNDIWHSC",
+      "dataset_source": "tappy",
+      "parkinsons_label": 0,
+      "source_file": "HYGNDIWHSC_1609.txt",
+      "ht_mean": 123.05,
+      "left_ht_mean": 148.4,
+      "right_ht_mean": 114.6,
+      "ht_std": 18.601814427630444,
+      "n_keystrokes": 4,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (4 < 10)"
+      ]
+    },
+    {
+      "row_index": 256,
+      "subject_id": "JDWYGP605O",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "JDWYGP605O_1609.txt",
+      "ht_mean": 66.4125,
+      "left_ht_mean": 66.425,
+      "right_ht_mean": 66.4,
+      "ht_std": 15.12724673395658,
+      "n_keystrokes": 8,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (8 < 10)"
+      ]
+    },
+    {
+      "row_index": 280,
+      "subject_id": "L7Q16SJ7KP",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "L7Q16SJ7KP_1612.txt",
+      "ht_mean": 128.9333333333333,
+      "left_ht_mean": 132.85,
+      "right_ht_mean": 121.1,
+      "ht_std": 32.36174009879911,
+      "n_keystrokes": 3,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (3 < 10)"
       ]
     },
     {
@@ -64,7 +169,7 @@
       "ht_std": 2195.6514900968305,
       "n_keystrokes": 7084,
       "exclusion_reasons": [
-        "ht_std extreme variance (2195.7ms)"
+        "ht_std extreme variance (2195.7ms > 1000ms)"
       ]
     },
     {
@@ -79,9 +184,9 @@
       "ht_std": 980424.9304350424,
       "n_keystrokes": 7765,
       "exclusion_reasons": [
-        "ht_mean negative/zero (-10966.2ms)",
-        "right_ht_mean negative/zero (-23155.1ms)",
-        "ht_std extreme variance (980424.9ms)"
+        "ht_mean negative/sub-minimum (-10966.2ms < 5.0ms)",
+        "right_ht_mean negative/sub-minimum (-23155.1ms < 5.0ms)",
+        "ht_std extreme variance (980424.9ms > 1000ms)"
       ]
     },
     {
@@ -96,7 +201,22 @@
       "ht_std": 1616.278138404322,
       "n_keystrokes": 2743,
       "exclusion_reasons": [
-        "ht_std extreme variance (1616.3ms)"
+        "ht_std extreme variance (1616.3ms > 1000ms)"
+      ]
+    },
+    {
+      "row_index": 425,
+      "subject_id": "T0RR5A7EFV",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "T0RR5A7EFV_1607.txt",
+      "ht_mean": 114.97142857142856,
+      "left_ht_mean": 113.3,
+      "right_ht_mean": 115.64,
+      "ht_std": 13.487000543985657,
+      "n_keystrokes": 7,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (7 < 10)"
       ]
     },
     {
@@ -111,9 +231,9 @@
       "ht_std": 541994.0118899562,
       "n_keystrokes": 25411,
       "exclusion_reasons": [
-        "ht_mean negative/zero (-3286.7ms)",
-        "right_ht_mean negative/zero (-7670.1ms)",
-        "ht_std extreme variance (541994.0ms)"
+        "ht_mean negative/sub-minimum (-3286.7ms < 5.0ms)",
+        "right_ht_mean negative/sub-minimum (-7670.1ms < 5.0ms)",
+        "ht_std extreme variance (541994.0ms > 1000ms)"
       ]
     },
     {
@@ -128,7 +248,22 @@
       "ht_std": 7498.083822023387,
       "n_keystrokes": 11743,
       "exclusion_reasons": [
-        "ht_std extreme variance (7498.1ms)"
+        "ht_std extreme variance (7498.1ms > 1000ms)"
+      ]
+    },
+    {
+      "row_index": 540,
+      "subject_id": "ZQ4UHHUPNZ",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "ZQ4UHHUPNZ_1703.txt",
+      "ht_mean": 108.95555555555556,
+      "left_ht_mean": 108.73333333333332,
+      "right_ht_mean": 109.4,
+      "ht_std": 15.112475428606883,
+      "n_keystrokes": 9,
+      "exclusion_reasons": [
+        "n_keystrokes below threshold (9 < 10)"
       ]
     }
   ]
