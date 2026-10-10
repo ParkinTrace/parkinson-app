@@ -1,0 +1,259 @@
+{
+  "dataset_file": "functions\\data\\harmonized\\harmonized_sessions.csv",
+  "total_rows": 668,
+  "total_unique_subjects": 297,
+  "datasets": {
+    "neuroqwerty": {
+      "rows": 116,
+      "unique_subjects": 85,
+      "multi_label_subjects": 0,
+      "row_level_labels": {
+        "1": 60,
+        "0": 56
+      },
+      "subject_level_labels": {
+        "0": 43,
+        "1": 42
+      },
+      "pd_prevalence_pct": 49.41,
+      "rows_per_subject_mean": 1.36,
+      "rows_per_subject_min": 1,
+      "rows_per_subject_max": 2
+    },
+    "tappy": {
+      "rows": 552,
+      "unique_subjects": 212,
+      "multi_label_subjects": 0,
+      "row_level_labels": {
+        "1": 422,
+        "0": 130
+      },
+      "subject_level_labels": {
+        "1": 158,
+        "0": 54
+      },
+      "pd_prevalence_pct": 74.53,
+      "rows_per_subject_mean": 2.6,
+      "rows_per_subject_min": 1,
+      "rows_per_subject_max": 10
+    }
+  },
+  "cross_dataset_overlap": [],
+  "missingness": {
+    "subject_id": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "str"
+    },
+    "dataset_source": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "str"
+    },
+    "parkinsons_label": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "int64"
+    },
+    "age_at_session": {
+      "missing_count": 223,
+      "missing_pct": 33.38,
+      "dtype": "float64"
+    },
+    "sex_gender": {
+      "missing_count": 116,
+      "missing_pct": 17.37,
+      "dtype": "str"
+    },
+    "demographics_available": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "bool"
+    },
+    "ht_mean": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "ht_std": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "ft_mean": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "ft_std": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "ikl_mean": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "ikl_std": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "left_ht_mean": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "right_ht_mean": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "hand_asymmetry": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "pause_frequency": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "typing_speed": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "session_consistency": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "float64"
+    },
+    "backspace_rate": {
+      "missing_count": 552,
+      "missing_pct": 82.63,
+      "dtype": "float64"
+    },
+    "n_keystrokes": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "int64"
+    },
+    "source_file": {
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "dtype": "str"
+    }
+  },
+  "timing_plausibility": {
+    "ht_mean": {
+      "min": -111484.0915,
+      "max": 231.1988,
+      "median": 114.232,
+      "iqr": 45.7053,
+      "negative_count": 4,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "ht_std": {
+      "min": 1.56,
+      "max": 3103576.8066,
+      "median": 37.3379,
+      "iqr": 27.032,
+      "negative_count": 0,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "ft_mean": {
+      "min": 26.729,
+      "max": 1220.386,
+      "median": 208.9299,
+      "iqr": 117.584,
+      "negative_count": 0,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "ft_std": {
+      "min": 58.724,
+      "max": 749.7222,
+      "median": 122.8995,
+      "iqr": 59.2826,
+      "negative_count": 0,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "ikl_mean": {
+      "min": 139.288,
+      "max": 1383.043,
+      "median": 300.3812,
+      "iqr": 149.9437,
+      "negative_count": 0,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "ikl_std": {
+      "min": 54.0881,
+      "max": 755.7606,
+      "median": 120.0302,
+      "iqr": 61.9407,
+      "negative_count": 0,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "left_ht_mean": {
+      "min": -208551.6304,
+      "max": 250.008,
+      "median": 118.7676,
+      "iqr": 47.3233,
+      "negative_count": 2,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "right_ht_mean": {
+      "min": -23155.059,
+      "max": 246.3111,
+      "median": 109.9322,
+      "iqr": 45.976,
+      "negative_count": 2,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "hand_asymmetry": {
+      "min": 0.0,
+      "max": 1453.5286,
+      "median": 0.0778,
+      "iqr": 0.1273,
+      "negative_count": 0,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "pause_frequency": {
+      "min": 0.0,
+      "max": 52.2443,
+      "median": 5.0694,
+      "iqr": 15.0939,
+      "negative_count": 0,
+      "zero_count": 303,
+      "infinite_count": 0
+    },
+    "typing_speed": {
+      "min": 0.2697,
+      "max": 7.1184,
+      "median": 3.0883,
+      "iqr": 1.75,
+      "negative_count": 0,
+      "zero_count": 0,
+      "infinite_count": 0
+    },
+    "session_consistency": {
+      "min": 0.1533,
+      "max": 0.81,
+      "median": 0.4009,
+      "iqr": 0.1605,
+      "negative_count": 0,
+      "zero_count": 0,
+      "infinite_count": 0
+    }
+  }
+}

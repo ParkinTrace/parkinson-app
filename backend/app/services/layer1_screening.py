@@ -49,6 +49,11 @@ def artifact_status() -> dict:
             bundle = _load()
             info["loaded"] = True
             info["model"] = type(bundle["model"]).__name__
+            info["version"] = bundle.get("version", "1.0.0")
+            info["calibrated_thresholds"] = {
+                "watch": bundle.get("watch_threshold"),
+                "attention": bundle.get("attention_threshold"),
+            }
             info["artifact_features"] = list(bundle["features"])
             info["match"] = list(bundle["features"]) == list(RF_LAYER1_FEATURES)
         except Exception as exc:  # noqa: BLE001
@@ -74,11 +79,15 @@ def _load():
         artifact = joblib.load(ARTIFACT)
         with open(LIVE_SCALER) as fh:
             scaler = json.load(fh)
+        thresholds = artifact.get("calibrated_thresholds", {})
         _bundle = {
             "model": artifact["model"],
             "features": artifact["features"],
             "mean": np.array(scaler["mean_"], dtype=float),
             "scale": np.array(scaler["scale_"], dtype=float),
+            "watch_threshold": float(thresholds.get("watch", WATCH_THRESHOLD)),
+            "attention_threshold": float(thresholds.get("attention", ATTENTION_THRESHOLD)),
+            "version": artifact.get("version", "1.0.0"),
         }
     return _bundle
 
@@ -108,12 +117,21 @@ def screen_against_reference(session_features: dict) -> dict:
     z = (row - bundle["mean"]) / bundle["scale"]
     probability = float(bundle["model"].predict_proba(z)[0][1])
 
-    if probability >= ATTENTION_THRESHOLD:
+    from app.services.explain import explain_session
+    try:
+        contributors = explain_session(session_features)
+    except Exception:
+        contributors = None
+
+    watch_t = bundle.get("watch_threshold", WATCH_THRESHOLD)
+    attn_t = bundle.get("attention_threshold", ATTENTION_THRESHOLD)
+
+    if probability >= attn_t:
         status = "attention"
         message = ("Your typing shows patterns that can be associated with "
                    "motor changes. This is not a diagnosis. We recommend "
                    "consulting a doctor for a check-up.")
-    elif probability >= WATCH_THRESHOLD:
+    elif probability >= watch_t:
         status = "watch"
         message = ("Some of your typing patterns are slightly outside the "
                    "typical range. Keep typing regularly so we can build "
@@ -123,4 +141,4 @@ def screen_against_reference(session_features: dict) -> dict:
         message = ("Your typing patterns are within the typical range. "
                    "Keep typing regularly for ongoing monitoring.")
     return {"status": status, "message": message,
-            "pd_probability": probability, "top_contributors": None}
+            "pd_probability": probability, "top_contributors": contributors if contributors else None}

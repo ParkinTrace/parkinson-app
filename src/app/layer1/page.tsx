@@ -64,12 +64,37 @@ export default function Layer1Page() {
         <FeatureComparisonChart features={state.features} />
         {contributors.length > 0 && (
           <Card>
-            <h3 className="font-semibold">What stood out</h3>
-            <ul className="mt-1 list-disc pl-5 text-sm text-slate-700">
-              {contributors.slice(0, 3).map((c, i) => (
-                <li key={i}>{String(c["text"] ?? c["feature"])}</li>
-              ))}
-            </ul>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="font-semibold text-slate-900">Influential Typing Characteristics (SHAP Feature Attribution)</h3>
+              <span className="text-xs text-slate-500 font-medium">Model Influence Rank</span>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              These factors contributed most to the model's population comparison. They describe movement patterns relative to research norms, not diagnostic signs.
+            </p>
+            <div className="mt-3 flex flex-col gap-2">
+              {contributors.slice(0, 3).map((c, i) => {
+                const text = String(c["text"] ?? c["feature"]);
+                const humanName = c["humanName"] ? String(c["humanName"]) : null;
+                const impact = String(c["impact"] ?? "");
+                const isIncreased = impact === "increased_risk_score";
+                return (
+                  <div key={i} className="flex items-start justify-between rounded-xl bg-slate-50 p-3 text-sm">
+                    <div className="flex flex-col">
+                      {humanName && <span className="font-medium text-slate-900">{humanName}</span>}
+                      <span className="text-slate-600 text-xs mt-0.5">{text}</span>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ml-3 ${
+                      isIncreased ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                    }`}>
+                      {isIncreased ? "Above reference" : "Within reference"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-800">
+              <strong>Responsible Health AI Notice:</strong> Typing patterns are behavioral research indicators. Atypical typing pace or variability can occur from fatigue, arthritis, typing style, or distractions, and does not constitute a clinical diagnosis of Parkinson's disease.
+            </div>
           </Card>
         )}
       </div>

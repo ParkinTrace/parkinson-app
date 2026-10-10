@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-10-10T17:30:03Z",
+  "model": "RandomForestClassifier",
+  "calibration_method": "sigmoid_platt_scaling",
+  "n_samples": 668,
+  "n_subjects": 297,
+  "uncalibrated_brier": 0.2298,
+  "calibrated_brier": 0.207,
+  "brier_improvement_pct": 9.91,
+  "roc_auc": 0.5054,
+  "reliability_curve": {
+    "mean_predicted_prob": [
+      0.5628,
+      0.7211,
+      0.8131
+    ],
+    "fraction_of_positives": [
+      0.8163,
+      0.7239,
+      0.6111
+    ]
+  },
+  "operating_thresholds": {
+    "watch_threshold_high_sensitivity": {
+      "threshold": 0.4271,
+      "sensitivity": 1.0,
+      "specificity": 0.0,
+      "f1": 0.8383,
+      "tn": 0,
+      "fp": 186,
+      "fn": 0,
+      "tp": 482
+    },
+    "attention_threshold_youden_optimal": {
+      "threshold": 0.7421,
+      "sensitivity": 0.4523,
+      "specificity": 0.6237,
+      "f1": 0.5662,
+      "tn": 116,
+      "fp": 70,
+      "fn": 264,
+      "tp": 218
+    },
+    "high_specificity_threshold": {
+      "threshold": Infinity,
+      "sensitivity": 0.0,
+      "specificity": 1.0,
+      "f1": 0.0,
+      "tn": 186,
+      "fp": 0,
+      "fn": 482,
+      "tp": 0
+    }
+  },
+  "artifact_sha256": "072ca735e6fa758575a0ffa95eed72232c7cd05ccc55335bca079eb1f5738864"
+}
