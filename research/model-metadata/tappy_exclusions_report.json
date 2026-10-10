@@ -1,0 +1,135 @@
+{
+  "total_raw_rows": 668,
+  "excluded_count": 8,
+  "remaining_clean_rows": 660,
+  "exclusions": [
+    {
+      "row_index": 79,
+      "subject_id": "927ZLCPEJM",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "927ZLCPEJM_1703.txt",
+      "ht_mean": -39693.23671119299,
+      "left_ht_mean": -69689.85088852991,
+      "right_ht_mean": 109.34458735262594,
+      "ht_std": 1853889.7664909635,
+      "n_keystrokes": 2171,
+      "exclusion_reasons": [
+        "ht_mean negative/zero (-39693.2ms)",
+        "left_ht_mean negative/zero (-69689.9ms)",
+        "ht_std extreme variance (1853889.8ms)"
+      ]
+    },
+    {
+      "row_index": 126,
+      "subject_id": "C6UGS6P0J0",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "C6UGS6P0J0_1609.txt",
+      "ht_mean": 132.11107541276218,
+      "left_ht_mean": 119.4367796073464,
+      "right_ht_mean": 148.48474125588055,
+      "ht_std": 1745.9338456710393,
+      "n_keystrokes": 11205,
+      "exclusion_reasons": [
+        "ht_std extreme variance (1745.9ms)"
+      ]
+    },
+    {
+      "row_index": 185,
+      "subject_id": "FHEOPKL3QQ",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "FHEOPKL3QQ_1611.txt",
+      "ht_mean": -111484.0914728682,
+      "left_ht_mean": -208551.63043478268,
+      "right_ht_mean": 143.57833333333332,
+      "ht_std": 3103576.806619164,
+      "n_keystrokes": 774,
+      "exclusion_reasons": [
+        "ht_mean negative/zero (-111484.1ms)",
+        "left_ht_mean negative/zero (-208551.6ms)",
+        "ht_std extreme variance (3103576.8ms)"
+      ]
+    },
+    {
+      "row_index": 370,
+      "subject_id": "QAH9IVALVC",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "QAH9IVALVC_1610.txt",
+      "ht_mean": 130.1827498588368,
+      "left_ht_mean": 104.48530818278428,
+      "right_ht_mean": 159.3168373493976,
+      "ht_std": 2195.6514900968305,
+      "n_keystrokes": 7084,
+      "exclusion_reasons": [
+        "ht_std extreme variance (2195.7ms)"
+      ]
+    },
+    {
+      "row_index": 408,
+      "subject_id": "SDZPQV3VZ1",
+      "dataset_source": "tappy",
+      "parkinsons_label": 0,
+      "source_file": "SDZPQV3VZ1_1611.txt",
+      "ht_mean": -10966.204417256922,
+      "left_ht_mean": 168.36527846229671,
+      "right_ht_mean": -23155.058969517137,
+      "ht_std": 980424.9304350424,
+      "n_keystrokes": 7765,
+      "exclusion_reasons": [
+        "ht_mean negative/zero (-10966.2ms)",
+        "right_ht_mean negative/zero (-23155.1ms)",
+        "ht_std extreme variance (980424.9ms)"
+      ]
+    },
+    {
+      "row_index": 417,
+      "subject_id": "SOP2REQFUH",
+      "dataset_source": "tappy",
+      "parkinsons_label": 0,
+      "source_file": "SOP2REQFUH_1609.txt",
+      "ht_mean": 147.98643820634345,
+      "left_ht_mean": 176.2203427719821,
+      "right_ht_mean": 120.94154175588864,
+      "ht_std": 1616.278138404322,
+      "n_keystrokes": 2743,
+      "exclusion_reasons": [
+        "ht_std extreme variance (1616.3ms)"
+      ]
+    },
+    {
+      "row_index": 476,
+      "subject_id": "VVYPNRQ5KG",
+      "dataset_source": "tappy",
+      "parkinsons_label": 1,
+      "source_file": "VVYPNRQ5KG_1612.txt",
+      "ht_mean": -3286.7396521191604,
+      "left_ht_mean": 111.49633924828838,
+      "right_ht_mean": -7670.118040911959,
+      "ht_std": 541994.0118899562,
+      "n_keystrokes": 25411,
+      "exclusion_reasons": [
+        "ht_mean negative/zero (-3286.7ms)",
+        "right_ht_mean negative/zero (-7670.1ms)",
+        "ht_std extreme variance (541994.0ms)"
+      ]
+    },
+    {
+      "row_index": 490,
+      "subject_id": "WXNQ0QM0XD",
+      "dataset_source": "tappy",
+      "parkinsons_label": 0,
+      "source_file": "WXNQ0QM0XD_1702.txt",
+      "ht_mean": 158.0585966107468,
+      "left_ht_mean": 93.13067908653846,
+      "right_ht_mean": 243.012443483389,
+      "ht_std": 7498.083822023387,
+      "n_keystrokes": 11743,
+      "exclusion_reasons": [
+        "ht_std extreme variance (7498.1ms)"
+      ]
+    }
+  ]
+}
