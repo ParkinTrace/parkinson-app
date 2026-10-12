@@ -5,6 +5,7 @@ Clinical feature grouping without diagnostic claims.
 Absence of shap degrades gracefully to top_contributors=None, never breaking live scoring.
 """
 
+import json
 import os
 import joblib
 import numpy as np
@@ -12,9 +13,13 @@ import pandas as pd
 
 _SERVICES_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_SERVICES_DIR)))
-ARTIFACT = os.environ.get(
-    "PARKINTRACE_RF_ARTIFACT",
-    os.path.join(_REPO_ROOT, "functions", "models", "experiments", "rf", "model_full.joblib"))
+LEGACY_ARTIFACT = os.path.join(
+    _REPO_ROOT, "functions", "models", "experiments", "rf", "model_full.joblib")
+LEGACY_SCALER = os.path.join(
+    _REPO_ROOT, "functions", "models", "experiments", "rf", "live_scaler.json")
+
+ARTIFACT = os.environ.get("PARKINTRACE_RF_ARTIFACT", LEGACY_ARTIFACT)
+LIVE_SCALER = os.environ.get("PARKINTRACE_RF_SCALER", LEGACY_SCALER)
 HARMONIZED_CSV = os.environ.get(
     "PARKINTRACE_HARMONIZED_CSV",
     os.path.join(_REPO_ROOT, "functions", "data", "harmonized", "harmonized_sessions.csv"))
@@ -26,74 +31,74 @@ FEATURE_METADATA = {
     "ht_mean": {
         "category": "speed_and_hold",
         "human_name": "Hold Time (Average)",
-        "high": "Key presses were held longer than typical",
-        "low": "Key presses were held shorter than typical",
+        "high": "Key presses were held longer than reference median",
+        "low": "Key presses were held shorter than reference median",
     },
     "ht_std": {
         "category": "rhythm_and_steadiness",
         "human_name": "Hold Time Variability",
-        "high": "Key hold duration was more variable than typical",
-        "low": "Key hold duration was steadier than typical",
+        "high": "Key hold duration had higher variability than reference median",
+        "low": "Key hold duration had lower variability than reference median",
     },
     "ft_mean": {
         "category": "hesitation_and_transitions",
         "human_name": "Flight Time (Transition Delay)",
-        "high": "Transitions between keys were slower than typical",
-        "low": "Transitions between keys were quicker than typical",
+        "high": "Transitions between keys were longer than reference median",
+        "low": "Transitions between keys were shorter than reference median",
     },
     "ft_std": {
         "category": "rhythm_and_steadiness",
         "human_name": "Flight Time Variability",
-        "high": "Transition timing between keys was more variable than typical",
-        "low": "Transition timing between keys was steadier than typical",
+        "high": "Transition timing had higher variability than reference median",
+        "low": "Transition timing had lower variability than reference median",
     },
     "ikl_mean": {
         "category": "speed_and_hold",
         "human_name": "Inter-Key Latency (Overall Pace)",
-        "high": "Overall typing pace was slower than typical",
-        "low": "Overall typing pace was faster than typical",
+        "high": "Inter-key latency was longer than reference median",
+        "low": "Inter-key latency was shorter than reference median",
     },
     "ikl_std": {
         "category": "rhythm_and_steadiness",
         "human_name": "Rhythm Variability",
-        "high": "Typing rhythm had greater variability than typical",
-        "low": "Typing rhythm was more consistent than typical",
+        "high": "Typing rhythm had higher variability than reference median",
+        "low": "Typing rhythm had lower variability than reference median",
     },
     "left_ht_mean": {
         "category": "lateral_asymmetry",
         "human_name": "Left-Hand Hold Duration",
-        "high": "Left-hand key presses were held longer than typical",
-        "low": "Left-hand key presses were held shorter than typical",
+        "high": "Left-hand key presses were held longer than reference median",
+        "low": "Left-hand key presses were held shorter than reference median",
     },
     "right_ht_mean": {
         "category": "lateral_asymmetry",
         "human_name": "Right-Hand Hold Duration",
-        "high": "Right-hand key presses were held longer than typical",
-        "low": "Right-hand key presses were held shorter than typical",
+        "high": "Right-hand key presses were held longer than reference median",
+        "low": "Right-hand key presses were held shorter than reference median",
     },
     "hand_asymmetry": {
         "category": "lateral_asymmetry",
         "human_name": "Left/Right Hand Asymmetry",
-        "high": "Greater timing asymmetry between left and right hands than typical",
-        "low": "More balanced left/right hand timing than typical",
+        "high": "Hand hold asymmetry was greater than reference median",
+        "low": "Hand hold asymmetry was lower than reference median",
     },
     "pause_frequency": {
         "category": "hesitation_and_transitions",
         "human_name": "Pause Frequency",
-        "high": "Frequency of pauses (>500ms) was higher than typical",
-        "low": "Frequency of pauses was lower than typical",
+        "high": "Pause frequency (>500ms) was higher than reference median",
+        "low": "Pause frequency (>500ms) was lower than reference median",
     },
     "typing_speed": {
         "category": "speed_and_hold",
         "human_name": "Typing Speed (Keys/sec)",
-        "high": "Typing speed was faster than typical",
-        "low": "Typing speed was slower than typical",
+        "high": "Typing speed was faster than reference median",
+        "low": "Typing speed was slower than reference median",
     },
     "session_consistency": {
         "category": "rhythm_and_steadiness",
-        "human_name": "Rhythmic Consistency Ratio",
-        "high": "Typing pace was less regular than typical",
-        "low": "Typing pace was more regular than typical",
+        "human_name": "Rhythmic Variation Ratio",
+        "high": "Rhythm variation ratio was higher than reference median",
+        "low": "Rhythm variation ratio was lower than reference median",
     },
 }
 
@@ -108,8 +113,21 @@ def _load():
         artifact = joblib.load(ARTIFACT)
         features = artifact["features"]
 
+        if os.path.exists(LIVE_SCALER):
+            with open(LIVE_SCALER, "r", encoding="utf-8") as fh:
+                scaler_info = json.load(fh)
+            mean = np.array(scaler_info["mean_"], dtype=float)
+            scale = np.array(scaler_info["scale_"], dtype=float)
+        else:
+            mean = np.zeros(len(features), dtype=float)
+            scale = np.ones(len(features), dtype=float)
+
         if os.path.exists(HARMONIZED_CSV):
             frame = pd.read_csv(HARMONIZED_CSV)
+            if "dataset_source" in frame.columns:
+                ref_frame = frame[frame["dataset_source"] == "neuroqwerty"]
+                if len(ref_frame) > 0:
+                    frame = ref_frame
             background = frame[features].dropna().sample(
                 n=min(N_BACKGROUND, len(frame)), random_state=42)
         else:
@@ -121,11 +139,17 @@ def _load():
             raise ImportError(f"shap library not available: {exc}") from exc
 
         tree_model = artifact.get("base_model", artifact["model"])
-        explainer = shap.TreeExplainer(tree_model, data=background)
+        bg_scaled = pd.DataFrame(
+            (background.values - mean) / scale,
+            columns=features
+        )
+        explainer = shap.TreeExplainer(tree_model, data=bg_scaled)
         _bundle = {
             "model": tree_model,
             "features": features,
             "background": background,
+            "mean": mean,
+            "scale": scale,
             "explainer": explainer
         }
     return _bundle
@@ -138,15 +162,20 @@ def explain_session(session_features: dict, top_k: int = TOP_K) -> list:
     """
     try:
         bundle = _load()
-    except Exception as exc:
+    except Exception:
         # Non-fatal: degradation mode
         return []
 
     try:
-        row = pd.DataFrame(
+        row_raw = pd.DataFrame(
             [[float(session_features[name]) for name in bundle["features"]]],
             columns=bundle["features"])
-        values = np.asarray(bundle["explainer"].shap_values(row))
+        if not np.all(np.isfinite(row_raw.values)):
+            return []
+        row_scaled = pd.DataFrame(
+            (row_raw.values - bundle["mean"]) / bundle["scale"],
+            columns=bundle["features"])
+        values = np.asarray(bundle["explainer"].shap_values(row_scaled))
         if values.ndim == 3:
             # Multi-class or binary shape (samples, features, classes) -> take positive class (PD=1)
             values = values[0, :, 1]
@@ -162,13 +191,13 @@ def explain_session(session_features: dict, top_k: int = TOP_K) -> list:
         out = []
         for name, contribution in ranked:
             typical = float(background[name].median())
-            actual = float(row[name].iloc[0])
+            actual = float(row_raw[name].iloc[0])
             high_side = actual >= typical
             meta = FEATURE_METADATA.get(name, {
                 "category": "general",
                 "human_name": name,
-                "high": f"{name} was higher than typical",
-                "low": f"{name} was lower than typical",
+                "high": f"{name} was higher than reference median",
+                "low": f"{name} was lower than reference median",
             })
 
             text_desc = meta["high"] if high_side else meta["low"]

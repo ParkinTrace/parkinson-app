@@ -69,7 +69,7 @@ export default function Layer1Page() {
               <span className="text-xs text-slate-500 font-medium">Model Influence Rank</span>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              These factors contributed most to the model's population comparison. They describe movement patterns relative to research norms, not diagnostic signs.
+              These factors contributed most to the model&apos;s population comparison. They describe movement patterns relative to research norms, not diagnostic signs.
             </p>
             <div className="mt-3 flex flex-col gap-2">
               {contributors.slice(0, 3).map((c, i) => {
@@ -93,7 +93,7 @@ export default function Layer1Page() {
               })}
             </div>
             <div className="mt-4 rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-800">
-              <strong>Responsible Health AI Notice:</strong> Typing patterns are behavioral research indicators. Atypical typing pace or variability can occur from fatigue, arthritis, typing style, or distractions, and does not constitute a clinical diagnosis of Parkinson's disease.
+              <strong>Responsible Health AI Notice:</strong> Typing patterns are behavioral research indicators. Atypical typing pace or variability can occur from fatigue, arthritis, typing style, or distractions, and does not constitute a clinical diagnosis of Parkinson&apos;s disease.
             </div>
           </Card>
         )}

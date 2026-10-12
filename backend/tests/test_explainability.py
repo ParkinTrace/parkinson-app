@@ -52,3 +52,70 @@ def test_explain_session_handles_invalid_gracefully():
     incomplete = {"ht_mean": 100.0}
     res = explain_session(incomplete)
     assert isinstance(res, list)
+    assert len(res) == 0
+
+
+def test_production_feature_contract_alignment():
+    """Verify production feature count, order, and isolation of research features."""
+    import joblib
+    from app.core.constants import RF_LAYER1_FEATURES
+    from app.services.layer1_screening import ARTIFACT
+
+    bundle = joblib.load(ARTIFACT)
+    artifact_features = bundle["features"]
+
+    # 1. Must be exactly 12 features
+    assert len(artifact_features) == 12
+    assert len(RF_LAYER1_FEATURES) == 12
+
+    # 2. Must be strictly identical in order
+    assert list(artifact_features) == list(RF_LAYER1_FEATURES)
+
+    # 3. ht_cv and backspace_rate must NOT be present in production model
+    assert "ht_cv" not in artifact_features
+    assert "backspace_rate" not in artifact_features
+
+
+def test_screening_and_explainability_handles_non_finite_and_malformed():
+    """Verify robust fail-closed handling of NaN, Inf, None, and string values."""
+    import numpy as np
+
+    # 1. Missing keys
+    incomplete = {"ht_mean": 120.0}
+    res_l1 = screen_against_reference(incomplete)
+    assert res_l1["status"] == "insufficient_data"
+    assert res_l1["pd_probability"] is None
+    assert res_l1["top_contributors"] is None
+    assert explain_session(incomplete) == []
+
+    # 2. NaN values
+    with_nan = dict(SAMPLE_FEATURES)
+    with_nan["ht_mean"] = float(np.nan)
+    res_l1 = screen_against_reference(with_nan)
+    assert res_l1["status"] == "insufficient_data"
+    assert res_l1["pd_probability"] is None
+    assert explain_session(with_nan) == []
+
+    # 3. Inf values
+    with_inf = dict(SAMPLE_FEATURES)
+    with_inf["pause_frequency"] = float(np.inf)
+    res_l1 = screen_against_reference(with_inf)
+    assert res_l1["status"] == "insufficient_data"
+    assert res_l1["pd_probability"] is None
+    assert explain_session(with_inf) == []
+
+    # 4. Malformed / None values
+    with_none = dict(SAMPLE_FEATURES)
+    with_none["typing_speed"] = None
+    res_l1 = screen_against_reference(with_none)
+    assert res_l1["status"] == "insufficient_data"
+    assert res_l1["pd_probability"] is None
+    assert explain_session(with_none) == []
+
+    # 5. String types
+    with_str = dict(SAMPLE_FEATURES)
+    with_str["session_consistency"] = "invalid_string"
+    res_l1 = screen_against_reference(with_str)
+    assert res_l1["status"] == "insufficient_data"
+    assert res_l1["pd_probability"] is None
+    assert explain_session(with_str) == []

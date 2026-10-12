@@ -1,8 +1,8 @@
 # ParkTrace: Final Numerical Consistency & Model Validation Audit
 
-**Auditor**: Senior Machine Learning Engineer & Scientific ML Auditor  
-**Date**: 2026-10-10  
-**Audited Branch**: `feature/parkintrace-v2`  
+**Auditor**: Senior Machine Learning Engineer & Scientific ML Auditor<br/>
+**Date**: 2026-10-12<br/>
+**Audited Branch**: `feature/parkintrace-v2`<br/>
 **Historical Fold Benchmark**: Commit `c5f762d` (`folds_neuroqwerty.json`, `folds_tappy.json`, `folds_pooled.json`)  
 **Strict Evaluation Standard**: Byte-identical 5-Fold `StratifiedGroupKFold` grouped on `subject_id` (0 subject leakage across training/test splits).  
 

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, PrimaryButton, SecondaryButton, StatusBadge } from "@/components/ui";
 import { useTypingCapture } from "@/hooks/useTypingCapture";
@@ -26,6 +26,7 @@ export default function TypingTestPage() {
   // Randomize only after mount: picking during render would differ
   // between server and client and break hydration.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrompt(PROMPTS[Math.floor(Math.random() * PROMPTS.length)]);
   }, []);
   const [text, setText] = useState("");
@@ -33,15 +34,26 @@ export default function TypingTestPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<Record<string, number | null> | null>(null);
+  const [completedSessionId, setCompletedSessionId] = useState<string>("");
+  const [elapsed, setElapsed] = useState(0);
   const sessionIdRef = useRef<string>(newSessionId());
   const t0Ref = useRef<number>(0);
 
-  const elapsed = useMemo(() => (startedAt ? (performance.now() - t0Ref.current) / 1000 : 0), [startedAt, count]);
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [active]);
 
   const begin = () => {
-    sessionIdRef.current = newSessionId();
+    const sid = newSessionId();
+    sessionIdRef.current = sid;
+    setCompletedSessionId(sid);
     setStartedAt(new Date().toISOString());
     t0Ref.current = performance.now();
+    setElapsed(0);
     setText("");
     setPreview(null);
     setError("");
@@ -152,7 +164,7 @@ export default function TypingTestPage() {
             <dt>Inter-key latency</dt><dd>{preview.ikl_mean?.toFixed(0) ?? "—"} ms</dd>
             <dt>Typing speed</dt><dd>{preview.typing_speed?.toFixed(2) ?? "—"} keys/s</dd>
           </dl>
-          <div className="mt-3"><SecondaryButton href={`/session/${sessionIdRef.current}`}>Open session insight</SecondaryButton></div>
+          <div className="mt-3"><SecondaryButton href={`/session/${completedSessionId}`}>Open session insight</SecondaryButton></div>
         </Card>
       )}
     </div>

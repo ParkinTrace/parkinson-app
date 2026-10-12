@@ -1,10 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
+import fs from "fs";
 import path from "path";
 
 const PORT = 3111;
 const API_PORT = 8101;
 const BACKEND = path.resolve(__dirname, "backend");
 const VENV_PY = path.join(BACKEND, ".venv", "Scripts", "python");
+const PYTHON_CMD = fs.existsSync(VENV_PY) ? `"${VENV_PY}"` : (process.env.PYTHON || "python");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -13,8 +15,8 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${PORT}`, ...devices["Desktop Chrome"] },
   webServer: [
     {
-      // Local FastAPI (pinned venv, sklearn 1.6.1, real RF artifact).
-      command: `"${VENV_PY}" -m uvicorn app.main:app --port ${API_PORT}`,
+      // Local FastAPI (pinned venv or system python with dependencies).
+      command: `${PYTHON_CMD} -m uvicorn app.main:app --port ${API_PORT}`,
       url: `http://localhost:${API_PORT}/api/v1/health`,
       cwd: BACKEND,
       reuseExistingServer: true,

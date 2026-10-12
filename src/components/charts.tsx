@@ -91,41 +91,81 @@ export function RhythmChart({ series }: { series: WithinSessionSeries | null }) 
 
 export interface TrendPoint {
   date: string;
-  ht_mean: number | null;
-  ft_mean: number | null;
-  ikl_mean: number | null;
+  ht_mean?: number | null;
+  ft_mean?: number | null;
+  ikl_mean?: number | null;
+  typing_speed?: number | null;
+  pause_frequency?: number | null;
+  session_consistency?: number | null;
+  hand_asymmetry?: number | null;
+  [key: string]: unknown;
 }
 
 export function LongitudinalChart({
   points,
   metric = "ht_mean",
+  title = "Personal trend",
+  baselineMedian = null,
 }: {
   points: TrendPoint[];
-  metric?: keyof TrendPoint;
+  metric?: string;
+  title?: string;
+  baselineMedian?: number | null;
 }) {
   const rows = points
-    .map((p) => ({ date: p.date.slice(0, 10), value: p[metric] }))
-    .filter((r) => typeof r.value === "number");
+    .map((p) => ({
+      date: p.date.slice(0, 10),
+      value: typeof p[metric] === "number" ? p[metric] : null,
+      baseline: baselineMedian,
+    }))
+    .filter((r) => r.value !== null);
+
   if (rows.length < 2) {
     return (
       <Card>
-        <h3 className="font-semibold">Personal trend</h3>
-        <p className="mt-1 text-sm text-slate-600">Not enough sessions for a longitudinal trend.</p>
+        <h3 className="font-semibold">{title}</h3>
+        <p className="mt-1 text-sm text-slate-600">Not enough sessions for a longitudinal trend (minimum 2 required).</p>
       </Card>
     );
   }
+
   return (
     <Card>
-      <h3 className="font-semibold">Personal trend — real sessions</h3>
-      <p className="text-sm text-slate-500">Each point is one persisted session. No fabricated history.</p>
-      <div className="mt-3 h-56">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">{title}</h3>
+        {baselineMedian !== null && (
+          <span className="text-xs font-medium text-teal-700">
+            Baseline Median: {baselineMedian.toFixed(1)}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-slate-500">Each point represents one completed, validated session.</p>
+      <div className="mt-3 h-64">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} domain={["auto", "auto"]} />
             <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#0d9488" strokeWidth={2} dot />
+            <Line
+              type="monotone"
+              dataKey="value"
+              name="Session value"
+              stroke="#0d9488"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+            />
+            {baselineMedian !== null && (
+              <Line
+                type="monotone"
+                dataKey="baseline"
+                name="Baseline median"
+                stroke="#f59e0b"
+                strokeDasharray="4 4"
+                strokeWidth={1.5}
+                dot={false}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>

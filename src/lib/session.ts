@@ -108,14 +108,26 @@ export async function fetchSessionExact(sessionId: string): Promise<{ session: S
 
 export async function fetchHistory(limit = 200): Promise<SessionRow[]> {
   const supa = supabaseBrowser();
-  if (!supa) return [];
-  const { data: auth } = await supa.auth.getUser();
-  if (!auth.user) return [];
-  const { data } = await supa
-    .from("sessions")
-    .select("*")
-    .eq("user_id", auth.user.id)
-    .order("started_at", { ascending: true })
-    .limit(limit);
-  return (data ?? []) as SessionRow[];
+  if (supa) {
+    const { data: auth } = await supa.auth.getUser();
+    if (auth.user) {
+      const { data } = await supa
+        .from("sessions")
+        .select("*")
+        .eq("user_id", auth.user.id)
+        .order("started_at", { ascending: true })
+        .limit(limit);
+      return (data ?? []) as SessionRow[];
+    }
+  }
+  // Local storage fallback for offline / test environments
+  if (typeof window !== "undefined") {
+    try {
+      const local = localStorage.getItem("parkintrace_local_history");
+      if (local) {
+        return JSON.parse(local) as SessionRow[];
+      }
+    } catch {}
+  }
+  return [];
 }

@@ -9,8 +9,9 @@ All chart series come from real persisted rows. Insufficient data is
 reported honestly (spec 26) — no synthetic points, no fake history.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 
+from app.core.auth import verify_user_authorization
 from app.services.supabase_store import (
     fetch_metrics_exact,
     fetch_session_exact,
@@ -22,11 +23,12 @@ router = APIRouter()
 
 
 @router.get("/insights/layer1")
-def insight_layer1(user_id: str) -> dict:
+def insight_layer1(user_id: str, authorization: str | None = Header(default=None)) -> dict:
+    verified_uid = verify_user_authorization(user_id, authorization)
     client = get_service_client()
     if client is None:
         raise HTTPException(status_code=501, detail="Supabase not configured")
-    res = (client.table("session_metrics").select("*").eq("user_id", user_id)
+    res = (client.table("session_metrics").select("*").eq("user_id", verified_uid)
            .order("created_at", desc=True).limit(1).execute())
     rows = res.data or []
     if not rows or not rows[0].get("layer1_result"):
@@ -36,13 +38,14 @@ def insight_layer1(user_id: str) -> dict:
 
 
 @router.get("/insights/layer2")
-def insight_layer2(user_id: str) -> dict:
+def insight_layer2(user_id: str, authorization: str | None = Header(default=None)) -> dict:
+    verified_uid = verify_user_authorization(user_id, authorization)
     client = get_service_client()
     if client is None:
         raise HTTPException(status_code=501, detail="Supabase not configured")
-    sessions = history_for_user(client, user_id)
+    sessions = history_for_user(client, verified_uid)
     metrics = (client.table("session_metrics").select("*")
-               .eq("user_id", user_id).order("created_at").execute()).data or []
+               .eq("user_id", verified_uid).order("created_at").execute()).data or []
     if len(metrics) < 1:
         return {"status": "insufficient_data",
                 "message": "Save a typing session to begin monitoring."}
@@ -58,12 +61,13 @@ def insight_layer2(user_id: str) -> dict:
 
 
 @router.get("/sessions/{session_id}/insight")
-def session_insight(session_id: str, user_id: str) -> dict:
+def session_insight(session_id: str, user_id: str, authorization: str | None = Header(default=None)) -> dict:
+    verified_uid = verify_user_authorization(user_id, authorization)
     client = get_service_client()
     if client is None:
         raise HTTPException(status_code=501, detail="Supabase not configured")
-    row = fetch_session_exact(client, session_id, user_id)
+    row = fetch_session_exact(client, session_id, verified_uid)
     if row is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    metrics = fetch_metrics_exact(client, session_id, user_id)
+    metrics = fetch_metrics_exact(client, session_id, verified_uid)
     return {"session": row, "metrics": metrics}

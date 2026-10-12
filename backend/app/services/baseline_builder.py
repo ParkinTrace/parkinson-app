@@ -11,7 +11,7 @@ boundary so old exports can be re-validated without silent renaming.
 """
 
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 
@@ -119,7 +119,7 @@ def build_baseline(sessions: list) -> tuple:
         "features": features,
         "session_count": len(baseline_sessions),
         "anchor_device_id": anchor_device,
-        "built_date": datetime.utcnow(),
+        "built_date": datetime.now(timezone.utc),
         "window_start": _ts(baseline_sessions[0]),
         "window_end": _ts(baseline_sessions[-1]),
     }

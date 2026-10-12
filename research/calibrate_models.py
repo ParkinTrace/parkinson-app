@@ -55,6 +55,9 @@ def compute_threshold_metrics(y_true, y_prob, threshold):
 def run_calibration_experiment():
     print(f"Loading dataset: {CSV_PATH}")
     df = pd.read_csv(CSV_PATH)
+    if "dataset_source" in df.columns:
+        print("Filtering exclusively for authoritative Layer 1 reference cohort: NeuroQWERTY (active typing)")
+        df = df[df["dataset_source"] == "neuroqwerty"].copy().reset_index(drop=True)
 
     X_raw = df[BASE_FEATURES].to_numpy(dtype=float)
     y = df["parkinsons_label"].to_numpy(dtype=int)
@@ -108,8 +111,8 @@ def run_calibration_experiment():
     watch_thresh = float(threshs[sens_85_idx[-1]]) if len(sens_85_idx) else 0.40
 
     # Find specificity >= 85% threshold (FPR <= 0.15)
-    spec_85_idx = np.where(fpr <= 0.15)[0]
-    high_spec_thresh = float(threshs[spec_85_idx[0]]) if len(spec_85_idx) else 0.65
+    spec_85_idx = np.where((fpr <= 0.15) & np.isfinite(threshs))[0]
+    high_spec_thresh = float(threshs[spec_85_idx[0]]) if len(spec_85_idx) else 0.70
 
     watch_metrics = compute_threshold_metrics(y, cal_probs, watch_thresh)
     youden_metrics = compute_threshold_metrics(y, cal_probs, youden_thresh)

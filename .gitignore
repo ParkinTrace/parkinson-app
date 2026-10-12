@@ -1,4 +1,4 @@
-﻿# Miscellaneous
+# Miscellaneous
 *.class
 *.log
 *.pyc
@@ -96,6 +96,7 @@ node_modules/
 .pnp.*
 test-results/
 playwright-report/
+e2e/screenshots/
 .next/
 /out/
 .vercel/
