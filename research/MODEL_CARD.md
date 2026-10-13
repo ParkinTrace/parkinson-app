@@ -6,10 +6,11 @@ This Model Card documents the architecture, provenance, evaluation, limitations,
 
 ## 1. Model Details
 
-* **Model Name**: ParkTrace Layer 1 Population Screening Model
-* **Model Version**: `1.1.0-calibrated`
-* **Model Family**: Ensemble of Decision Trees (`RandomForestClassifier`, 200 estimators, max depth 8, balanced class weights) + Probability Calibration (`CalibratedClassifierCV`, Sigmoid Platt Scaling).
-* **Feature Schema**: 13 physical keyboard typing features (Hold Time mean/std, Flight Time mean/std, Inter-Key Latency mean/std, Lateral Asymmetry, Pause Frequency, Typing Speed, Rhythm Consistency, and `ht_cv` hold-time coefficient of variation).
+* **Model Name**: ParkTrace Layer 1 Population Screening Reference Model
+* **Model Version**: `1.0.0-production`
+* **Model Family**: Ensemble of Decision Trees (`RandomForestClassifier`, 200 estimators, max depth 8, balanced class weights).
+* **Production Feature Schema (12 Features)**: Fixed 12 physical keyboard typing features (`ht_mean`, `ht_std`, `ft_mean`, `ft_std`, `ikl_mean`, `ikl_std`, `left_ht_mean`, `right_ht_mean`, `hand_asymmetry`, `pause_frequency`, `typing_speed`, `session_consistency`).
+* **Research Feature Schema (13 Features)**: Evaluates candidate `ht_cv` (hold-time coefficient of variation) in research benchmarks (`research/final_numerical_audit.py`); strictly quarantined from production inference.
 * **License**: Research prototype for academic and digital biomarker screening research.
 
 ---

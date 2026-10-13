@@ -12,9 +12,13 @@ export default function ConsentPage() {
   const next = async () => {
     const supa = supabaseBrowser();
     if (supa) {
-      const { data } = await supa.auth.getUser();
-      if (data.user) {
-        await supa.from("profiles").upsert({ id: data.user.id, parkinson_context: { research_consent: research } });
+      try {
+        const { data } = await supa.auth.getUser();
+        if (data?.user) {
+          await supa.from("profiles").upsert({ id: data.user.id, parkinson_context: { research_consent: research } });
+        }
+      } catch {
+        /* proceed offline/locally */
       }
     }
     try {

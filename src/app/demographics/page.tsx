@@ -25,18 +25,22 @@ export default function DemographicsPage() {
   const onSubmit = async (v: Form) => {
     const supa = supabaseBrowser();
     if (supa) {
-      const { data } = await supa.auth.getUser();
-      if (data.user) {
-        await supa.from("profiles").upsert({
-          id: data.user.id,
-          age: v.age ? Number(v.age) : null,
-          gender: v.gender || null,
-          typing_experience: v.typingExperience || null,
-          parkinson_context: {
-            context: v.parkinsonContext || null,
-            diagnosis_year: v.diagnosisYear ? Number(v.diagnosisYear) : null,
-          },
-        });
+      try {
+        const { data } = await supa.auth.getUser();
+        if (data?.user) {
+          await supa.from("profiles").upsert({
+            id: data.user.id,
+            age: v.age ? Number(v.age) : null,
+            gender: v.gender || null,
+            typing_experience: v.typingExperience || null,
+            parkinson_context: {
+              context: v.parkinsonContext || null,
+              diagnosis_year: v.diagnosisYear ? Number(v.diagnosisYear) : null,
+            },
+          });
+        }
+      } catch {
+        /* proceed offline/locally */
       }
     }
     try {
