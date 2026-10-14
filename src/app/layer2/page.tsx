@@ -222,6 +222,8 @@ export default function Layer2Page() {
   };
 
   useEffect(() => {
+    // Initial data load on mount — intentional fetch-then-set, not a render cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRealData();
   }, []);
 
