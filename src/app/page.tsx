@@ -43,6 +43,20 @@ export default function SplashPage() {
           Sign up
         </a>
       </div>
+      <div className="mt-2 flex flex-wrap justify-center gap-2">
+        <a
+          href="/layer2"
+          className="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-800 hover:bg-teal-100 transition-colors"
+        >
+          View Layer 2 Longitudinal Dashboard →
+        </a>
+        <a
+          href="/test"
+          className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors"
+        >
+          Try Typing Test →
+        </a>
+      </div>
       {!isSupabaseConfigured && (
         <p className="text-sm text-amber-700">
           Backend not configured — connect Supabase to enable sign-in.
