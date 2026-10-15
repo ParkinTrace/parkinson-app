@@ -90,8 +90,13 @@ Rules:
   - No Supabase session → return `"anonymous"`.
   - Session present → read `profiles.onboarding_completed` for `session.user.id`.
     - row present → `"complete"` if true, else `"incomplete"`;
-    - read fails / no row → fall back to the `localStorage` key `parkintrace-onboarded`
-      (`"1"` → `"complete"`, otherwise `"incomplete"`). Never throw.
+    - **no row → `"incomplete"`.** A `profiles` row is only created when the app
+      first writes one (there is no signup trigger in `0001_core.sql`), so a
+      brand-new account legitimately has no row. It has therefore never
+      completed onboarding, and `localStorage` must NOT be consulted here — on a
+      shared browser a stale flag would skip the Layer 1 / Layer 2 explanation.
+    - query returned an error (transport/DB failure) → fall back to
+      `localStorage`; never throw.
 - `markOnboardingComplete()`:
   - Upsert `{ id, onboarding_completed: true }` to `profiles` (best effort, ignore errors);
   - always set `localStorage["parkintrace-onboarded"] = "1"` as the offline fallback;

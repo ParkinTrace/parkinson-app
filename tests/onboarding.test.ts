@@ -92,6 +92,22 @@ describe("account-based onboarding state", () => {
     expect(await getOnboardingState()).toBe("incomplete");
   });
 
+  it("returns incomplete for a brand-new account with no profiles row, even if localStorage is stale", async () => {
+    localStorage.setItem("parkintrace-onboarded", "1");
+    h.getSession.mockResolvedValue(signedIn);
+    h.from.mockImplementation(profilesRow(null));
+    expect(await getOnboardingState()).toBe("incomplete");
+  });
+
+  it("falls back to localStorage when the profiles read returns a transport error", async () => {
+    localStorage.setItem("parkintrace-onboarded", "1");
+    h.getSession.mockResolvedValue(signedIn);
+    h.from.mockImplementation(
+      profilesRow(null, { message: "TypeError: Failed to fetch", code: "" })
+    );
+    expect(await getOnboardingState()).toBe("complete");
+  });
+
   it("marks onboarding complete in localStorage, the store and the database", async () => {
     h.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     const upsert = vi.fn().mockResolvedValue({ error: null });

@@ -44,7 +44,15 @@ export async function getOnboardingState(): Promise<OnboardingState> {
       .eq("id", userId)
       .limit(1)
       .maybeSingle();
-    if (!error && data) return data.onboarding_completed ? "complete" : "incomplete";
+    if (error) {
+      // The account cannot be asked (transport/DB error): use the offline flag.
+      return readLocalFlag() ? "complete" : "incomplete";
+    }
+    // A missing row means this account has never finished onboarding. Do NOT
+    // consult localStorage here: on a shared browser a stale flag would let a
+    // brand-new account skip the Layer 1 / Layer 2 explanation entirely.
+    if (!data) return "incomplete";
+    return data.onboarding_completed ? "complete" : "incomplete";
   } catch {
     /* fall through to the offline fallback */
   }
