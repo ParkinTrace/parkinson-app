@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Card, Field, PrimaryButton, inputCls } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { isSupabaseConfigured } from "@/lib/config";
+import { getOnboardingState } from "@/lib/onboarding";
 import { useAppStore } from "@/store/useAppStore";
 
 const schema = z.object({
@@ -19,7 +20,6 @@ type Form = z.infer<typeof schema>;
 export default function LoginPage() {
   const router = useRouter();
   const setUserId = useAppStore((s) => s.setUserId);
-  const onboardingCompleted = useAppStore((s) => s.onboardingCompleted);
   const [error, setError] = useState("");
   const { register, handleSubmit, formState } = useForm<Form>({ resolver: zodResolver(schema) });
 
@@ -36,7 +36,8 @@ export default function LoginPage() {
       return;
     }
     setUserId(data.user?.id ?? null);
-    router.replace(onboardingCompleted ? "/dashboard" : "/consent");
+    const state = await getOnboardingState();
+    router.replace(state === "complete" ? "/dashboard" : "/consent");
   };
 
   return (
