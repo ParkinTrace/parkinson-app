@@ -18,7 +18,8 @@ export default function LayerSelectionPage() {
     <div className="mx-auto max-w-xl">
       <h1 className="text-2xl font-bold">Choose your starting view</h1>
       <p className="mt-1 text-sm text-slate-600">
-        You can switch layers anytime. Your first typing session is a real measurement.
+        You can switch layers anytime. Your first typing session is a real measurement — there is no
+        practice session.
       </p>
       <div className="mt-4 flex flex-col gap-3">
         <Card>

@@ -152,7 +152,9 @@ One line per layer, as requested:
   "Tracks change against your own baseline across sessions and days."
 
 Remove the trailing second sentence ("Session 1 is useful immediately while the baseline builds.")
-and keep the top preamble to one short sentence.
+and keep the top preamble short — but it MUST retain the phrase "no practice session". That
+sentence is the product invariant that `e2e/session.spec.ts` guards ("onboarding has no practice
+session gate"); dropping it silently removed a real assertion.
 
 ## Interfaces and data flow
 
