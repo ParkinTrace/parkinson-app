@@ -2,23 +2,25 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Logo, PrimaryButton } from "@/components/ui";
-import { supabaseBrowser } from "@/lib/supabaseClient";
 import { isSupabaseConfigured } from "@/lib/config";
-import { useAppStore } from "@/store/useAppStore";
+import { getOnboardingState } from "@/lib/onboarding";
 
 export default function SplashPage() {
   const router = useRouter();
-  const onboardingCompleted = useAppStore((s) => s.onboardingCompleted);
 
   useEffect(() => {
+    let active = true;
     const go = async () => {
       if (!isSupabaseConfigured) return;
-      const { data } = await supabaseBrowser()!.auth.getSession();
-      if (!data.session) return;
-      router.replace(onboardingCompleted ? "/dashboard" : "/consent");
+      const state = await getOnboardingState();
+      if (!active || state === "anonymous") return;
+      router.replace(state === "complete" ? "/dashboard" : "/consent");
     };
     go();
-  }, [router, onboardingCompleted]);
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   return (
     <div className="flex flex-col items-center gap-4 py-10 text-center">
@@ -41,20 +43,6 @@ export default function SplashPage() {
           className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 font-semibold text-slate-700 hover:bg-slate-50"
         >
           Sign up
-        </a>
-      </div>
-      <div className="mt-2 flex flex-wrap justify-center gap-2">
-        <a
-          href="/layer2"
-          className="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-800 hover:bg-teal-100 transition-colors"
-        >
-          View Layer 2 Longitudinal Dashboard →
-        </a>
-        <a
-          href="/test"
-          className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          Try Typing Test →
         </a>
       </div>
       {!isSupabaseConfigured && (
