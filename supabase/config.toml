@@ -1,2 +1,5 @@
+# Supabase project this repo deploys to (non-secret reference id).
+project_id = "zymdvngqgneratsfpzwu"
+
 [project]
 name = "parkintrace-supabase"
