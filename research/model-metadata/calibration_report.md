@@ -4,7 +4,7 @@
 
 - **Method**: `CalibratedClassifierCV(method='sigmoid', cv='prefit')`
 - **Uncalibrated Brier Score**: `0.1872`
-- **Calibrated Brier Score**: `0.1981` (**-5.83% error reduction**)
+- **Calibrated Brier Score**: `0.1981` (**+5.86% worse — calibration increased error vs `0.1872`; do not claim an improvement on this cohort**)
 - **Model Version**: `1.1.0-calibrated`
 - **Artifact SHA-256**: `9e5b047479545698907adc28c5cf6d1967d0e9f8dce0a726a4889b2905399333`
 

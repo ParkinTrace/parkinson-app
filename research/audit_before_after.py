@@ -58,16 +58,10 @@ def load_data_and_features():
     return df
 
 def get_historical_folds(view: str):
-    """Retrieves exact cached folds from historical commit c5f762d."""
-    file_map = {
-        "neuroqwerty": "functions/models/experiments/folds_neuroqwerty.json",
-        "tappy": "functions/models/experiments/folds_tappy.json",
-        "pooled": "functions/models/experiments/folds_pooled.json",
-    }
-    raw = subprocess.check_output(
-        ["git", "show", f"c5f762d:{file_map[view]}"]
-    ).decode("utf-8")
-    data = json.loads(raw)
+    """Loads vendored folds from research/model-metadata (copied from c5f762d)."""
+    path = os.path.join(REPO_ROOT, "research", "model-metadata", f"folds_{view}.json")
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
     return data["folds"]
 
 def bootstrap_subject_ci(y_true, y_prob, threshold, n_bootstraps=1000, seed=42):
@@ -139,10 +133,26 @@ def evaluate_pipeline_variant(df_view, folds, feature_cols, model_type="rf",
         # Predict probabilities
         p_te = clf.predict_proba(X_te)[:, 1]
 
-        # Determine threshold strictly on training data
+        # Determine threshold by inner 3-fold grouped CV inside training data only
         if tune_threshold:
-            p_tr = clf.predict_proba(X_tr)[:, 1]
-            fpr_tr, tpr_tr, th_tr = roc_curve(y_tr, p_tr)
+            from sklearn.model_selection import StratifiedGroupKFold as _SGKF
+            p_tr_inner = np.zeros(len(train_idx))
+            for _itr, _ite in _SGKF(n_splits=3, shuffle=True, random_state=SEED).split(X[train_idx], y_tr, groups[train_idx]):
+                if model_type == "rf":
+                    _m = RandomForestClassifier(n_estimators=200, max_depth=8, class_weight="balanced", random_state=SEED)
+                else:
+                    _n_pos = int(y_tr[_itr].sum()); _n_neg = int(len(y_tr[_itr]) - _n_pos)
+                    _spw = (_n_neg / _n_pos) if _n_pos > 0 else 1.0
+                    _m = XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.05, scale_pos_weight=_spw, eval_metric="logloss", random_state=SEED)
+                _S = StandardScaler()
+                _Xtr = _S.fit_transform(X[train_idx][_itr]); _Xte = _S.transform(X[train_idx][_ite])
+                if calibrate:
+                    _c = CalibratedClassifierCV(estimator=_m, method="sigmoid", cv=3)
+                    _c.fit(_Xtr, y_tr[_itr])
+                else:
+                    _m.fit(_Xtr, y_tr[_itr]); _c = _m
+                p_tr_inner[_ite] = _c.predict_proba(_Xte)[:, 1]
+            fpr_tr, tpr_tr, th_tr = roc_curve(y_tr, p_tr_inner)
             j_tr = tpr_tr - fpr_tr
             thresh = float(th_tr[np.argmax(j_tr)])
         else:

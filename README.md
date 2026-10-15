@@ -110,6 +110,22 @@ npm run lint                # ESLint static analysis (0 errors)
 npx playwright test         # End-to-end browser integration suite
 ```
 
+### 4. Model artifact & raw data (both gitignored — not in the clone)
+`*.joblib`, `functions/data/tappy_dataset/keystrokes/`, `functions/data/tappy_dataset/users/`,
+`functions/data/neuroqwerty_dataset/nq/`, and `*.zip` are ignored per `.gitignore:71-81`.
+After cloning you have NEITHER `model_full.joblib` NOR the raw keystroke files.
+- Raw data: download Tappy v1.0.0 (`Archived-Data.zip`, `Archived-users.zip`) from
+  https://physionet.org/content/tappy/1.0.0/ (ODC-By-1.0; cite Adams 2017, PLOS ONE
+  e0188226) and neuroQWERTY MIT-CSXPD v1.0.0 (`neuroQWERTY.zip`) from
+  https://physionet.org/content/nqmitcsxpd/1.0.0/ (ODC-By-1.0; cite Giancardo et al. 2016,
+  Sci Rep 34468) into the paths above, then run the harmonization + `research/clean_tappy_data.py`.
+- Retrain / restore the artifact: `python research/run_benchmark.py` regenerates
+  `functions/models/experiments/rf/model_full.joblib` + `live_scaler.json` (RF 200 trees,
+  depth 8, seed 42; pinned `scikit-learn==1.6.1` per `backend/requirements.txt:11`)
+  and copies them to `backend/app/artifacts/`. Without this step `/api/v1/health`
+  reports fail-closed `degraded` and Layer 1 inference stays disabled
+  (see `backend/app/services/layer1_screening.py:42-67`).
+
 ---
 
 ## 🔒 Security, Privacy & Clinical Governance

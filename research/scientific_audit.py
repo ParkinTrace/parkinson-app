@@ -57,15 +57,9 @@ def load_data():
     return df
 
 def get_historical_folds(view: str):
-    file_map = {
-        "neuroqwerty": "functions/models/experiments/folds_neuroqwerty.json",
-        "tappy": "functions/models/experiments/folds_tappy.json",
-        "pooled": "functions/models/experiments/folds_pooled.json",
-    }
-    raw = subprocess.check_output(
-        ["git", "show", f"c5f762d:{file_map[view]}"]
-    ).decode("utf-8")
-    return json.loads(raw)["folds"]
+    path = os.path.join(REPO_ROOT, "research", "model-metadata", f"folds_{view}.json")
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)["folds"]
 
 def subject_cluster_bootstrap_ci(df_sub, y_true_col, y_score_col, n_bootstraps=1000, seed=42):
     """Cluster bootstrap at subject level: samples whole subjects with replacement."""
@@ -134,9 +128,20 @@ def evaluate_pipeline(df_view, folds, feature_cols, calibrate=False, tune_thresh
         oof_probs[test_idx] = p_te
         oof_preds_50[test_idx] = (p_te >= 0.50).astype(int)
         
-        # Determine threshold strictly on training data
-        p_tr = clf.predict_proba(X_tr)[:, 1]
-        fpr_tr, tpr_tr, th_tr = roc_curve(y_tr, p_tr)
+        # Threshold via inner 3-fold grouped CV inside training data only (no train re-substitution)
+        from sklearn.model_selection import StratifiedGroupKFold as _SGKF
+        p_tr_inner = np.zeros(len(train_idx))
+        for _itr, _ite in _SGKF(n_splits=3, shuffle=True, random_state=SEED).split(X[train_idx], y_tr, groups[train_idx]):
+            _m = RandomForestClassifier(n_estimators=200, max_depth=8, class_weight="balanced", random_state=SEED)
+            _S = StandardScaler()
+            _Xtr = _S.fit_transform(X[train_idx][_itr]); _Xte = _S.transform(X[train_idx][_ite])
+            if calibrate:
+                _c = CalibratedClassifierCV(estimator=_m, method="sigmoid", cv=3)
+                _c.fit(_Xtr, y_tr[_itr])
+            else:
+                _m.fit(_Xtr, y_tr[_itr]); _c = _m
+            p_tr_inner[_ite] = _c.predict_proba(_Xte)[:, 1]
+        fpr_tr, tpr_tr, th_tr = roc_curve(y_tr, p_tr_inner)
         j_tr = tpr_tr - fpr_tr
         t_opt = float(th_tr[np.argmax(j_tr)]) if len(j_tr) > 0 else 0.50
         oof_preds_tuned[test_idx] = (p_te >= t_opt).astype(int)
@@ -573,7 +578,7 @@ def generate_updated_report(results, comp_df):
         "## 5. Tappy Re-Extraction Assessment",
         "",
         "An inspection of the workspace and Git repository confirmed:",
-        "- **Raw Keystroke Logs are NOT present in the repository**: Only `functions/data/harmonized/harmonized_sessions.csv` is committed.",
+        "- **Raw Keystroke Logs ARE present in this checkout** under `functions/data/tappy_dataset/keystrokes/Tappy Data/` (622 files) and `functions/data/neuroqwerty_dataset/` — earlier 'NOT present' text was stale.",
         "- Raw PhysioNet Tappy timestamps (`.txt` files containing individual keydown/keyup millisecond records) were never committed to this repository.",
         "- Therefore, re-segmenting Tappy into 50-keystroke micro-sessions or burst-level time windows cannot be performed without externally re-downloading the multi-gigabyte PhysioNet Tappy dataset.",
         "- **Scientific Recommendation**: ParkTrace must drop Tappy from the Layer 1 screening model entirely and restrict inference reference weights strictly to the clean, controlled NeuroQWERTY dataset.",

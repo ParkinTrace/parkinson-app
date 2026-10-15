@@ -61,4 +61,4 @@
 2. **Balanced NeuroQWERTY**: NeuroQWERTY has 49.41% PD prevalence (42 PD vs 43 Controls) - ideal for controlled screening benchmarks.
 3. **Zero Subject Overlap**: Verified zero overlap between Tappy and NeuroQWERTY subject IDs.
 4. **No Inconsistent Subject Labels**: Every subject has a consistent label across all their session rows (0 multi-label subjects).
-5. **Clean Timing Sanity**: 0 negative or infinite values across all 12 typing features.
+5. **Timing Sanity FAILURE**: committed CSV contains negative means (`ht_mean`: 4, `left_ht_mean`: 2, `right_ht_mean`: 2 — see §3 table) and `ht_std` up to 3103576.8066 ms. Do not claim clean timing; re-harmonize from raw with `functions/services/tappy_adapter.py` before any benchmark.

@@ -51,15 +51,9 @@ def load_data():
     return df
 
 def get_historical_folds(view: str):
-    file_map = {
-        "neuroqwerty": "functions/models/experiments/folds_neuroqwerty.json",
-        "tappy": "functions/models/experiments/folds_tappy.json",
-        "pooled": "functions/models/experiments/folds_pooled.json",
-    }
-    raw = subprocess.check_output(
-        ["git", "show", f"c5f762d:{file_map[view]}"]
-    ).decode("utf-8")
-    return json.loads(raw)["folds"]
+    path = os.path.join(META_DIR, f"folds_{view}.json")
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)["folds"]
 
 def cluster_bootstrap_ci(df_sub, y_true_col, y_score_col, n_bootstraps=1000, seed=42):
     rng = np.random.RandomState(seed)
@@ -118,8 +112,22 @@ def evaluate_variant(df_view, folds, feature_cols, calibrate=False):
         oof_probs[test_idx] = p_te
         oof_preds_50[test_idx] = (p_te >= 0.50).astype(int)
         
-        p_tr = clf.predict_proba(X_tr)[:, 1]
-        fpr_tr, tpr_tr, th_tr = roc_curve(y_tr, p_tr)
+        p_tr_inner = np.zeros(len(train_idx))
+        from sklearn.model_selection import StratifiedGroupKFold as _SGKF
+        _inner = _SGKF(n_splits=3, shuffle=True, random_state=SEED)
+        for _itr, _ite in _inner.split(X[train_idx], y_tr, groups[train_idx]):
+            _m = RandomForestClassifier(n_estimators=200, max_depth=8, class_weight="balanced", random_state=SEED)
+            _S = StandardScaler()
+            _Xtr = _S.fit_transform(X[train_idx][_itr])
+            _Xte = _S.transform(X[train_idx][_ite])
+            if calibrate:
+                _c = CalibratedClassifierCV(estimator=_m, method="sigmoid", cv=3)
+                _c.fit(_Xtr, y_tr[_itr])
+            else:
+                _m.fit(_Xtr, y_tr[_itr])
+                _c = _m
+            p_tr_inner[_ite] = _c.predict_proba(_Xte)[:, 1]
+        fpr_tr, tpr_tr, th_tr = roc_curve(y_tr, p_tr_inner)
         j_tr = tpr_tr - fpr_tr
         t_opt = float(th_tr[np.argmax(j_tr)]) if len(j_tr) > 0 else 0.50
         thresholds.append(t_opt)

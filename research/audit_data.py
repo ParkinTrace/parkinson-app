@@ -155,7 +155,7 @@ def run_audit():
         f"2. **Balanced NeuroQWERTY**: NeuroQWERTY has {report['datasets']['neuroqwerty']['pd_prevalence_pct']}% PD prevalence ({report['datasets']['neuroqwerty']['subject_level_labels']['1']} PD vs {report['datasets']['neuroqwerty']['subject_level_labels']['0']} Controls) - ideal for controlled screening benchmarks.",
         "3. **Zero Subject Overlap**: Verified zero overlap between Tappy and NeuroQWERTY subject IDs.",
         "4. **No Inconsistent Subject Labels**: Every subject has a consistent label across all their session rows (0 multi-label subjects).",
-        "5. **Clean Timing Sanity**: 0 negative or infinite values across all 12 typing features.",
+        "5. **Timing Sanity FAILURE**: committed CSV contains negative means (ht_mean: 4, left_ht_mean: 2, right_ht_mean: 2 per timing_plausibility) and ht_std up to 3103576.8 ms — see §3 table. Do not claim clean timing.",
         ""
     ])
 
