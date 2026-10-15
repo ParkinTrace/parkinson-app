@@ -860,6 +860,182 @@ git commit -m "feat(onboarding): one-line layer descriptions, single completion 
 
 ---
 
+### Task 8: Test-only guard bypass for the e2e suite
+
+**Files:**
+- Modify: `src/lib/config.ts`
+- Modify: `src/lib/routes.ts`
+- Modify: `src/components/RequireAuth.tsx`
+- Modify: `src/components/Nav.tsx`
+- Modify: `playwright.config.ts:30`
+- Test: `tests/routes.test.ts` (add cases)
+
+**Interfaces:**
+- Consumes: nothing from earlier tasks beyond what exists.
+- Produces: `E2E_BYPASS_GUARD: boolean` from `@/lib/config`; `isGatedPath(pathname, opts)` from `@/lib/routes`.
+
+- [ ] **Step 1: Add the failing test cases**
+
+Append to `tests/routes.test.ts` (add `isGatedPath` to the existing import):
+
+```ts
+describe("isGatedPath", () => {
+  const configured = { supabaseConfigured: true, bypassGuard: false };
+
+  it("gates a private path when Supabase is configured", () => {
+    expect(isGatedPath("/dashboard", configured)).toBe(true);
+  });
+
+  it("never gates a public path", () => {
+    expect(isGatedPath("/", configured)).toBe(false);
+    expect(isGatedPath("/login", configured)).toBe(false);
+    expect(isGatedPath("/signup", configured)).toBe(false);
+  });
+
+  it("does not gate when Supabase is unconfigured (demo mode)", () => {
+    expect(isGatedPath("/dashboard", { supabaseConfigured: false, bypassGuard: false })).toBe(false);
+  });
+
+  it("does not gate when the e2e bypass is active", () => {
+    expect(isGatedPath("/dashboard", { supabaseConfigured: true, bypassGuard: true })).toBe(false);
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/routes.test.ts`
+Expected: FAIL — `isGatedPath is not a function` / not exported.
+
+- [ ] **Step 3: Add `isGatedPath` to `src/lib/routes.ts`**
+
+```ts
+/** True when a visitor must be signed in to view this path. */
+export function isGatedPath(
+  pathname: string,
+  opts: { supabaseConfigured: boolean; bypassGuard: boolean }
+): boolean {
+  return opts.supabaseConfigured && !opts.bypassGuard && !isPublicPath(pathname);
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run tests/routes.test.ts`
+Expected: PASS — 7 tests passed.
+
+- [ ] **Step 5: Add the flag to `src/lib/config.ts`**
+
+Append at the end of the file:
+
+```ts
+// Test-only: Playwright sets NEXT_PUBLIC_E2E_BYPASS_GUARD so private pages
+// render without a real session. Never honoured in a production build.
+export const E2E_BYPASS_GUARD =
+  process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_E2E_BYPASS_GUARD === "1";
+```
+
+- [ ] **Step 6: Honour it in the guard**
+
+In `src/components/RequireAuth.tsx`, change the import line:
+```tsx
+import { isSupabaseConfigured } from "@/lib/config";
+```
+to:
+```tsx
+import { E2E_BYPASS_GUARD, isSupabaseConfigured } from "@/lib/config";
+```
+
+and change:
+```tsx
+import { isPublicPath } from "@/lib/routes";
+```
+to:
+```tsx
+import { isGatedPath } from "@/lib/routes";
+```
+
+then change:
+```tsx
+  const gated = isSupabaseConfigured && !isPublicPath(pathname);
+```
+to:
+```tsx
+  const gated = isGatedPath(pathname, {
+    supabaseConfigured: isSupabaseConfigured,
+    bypassGuard: E2E_BYPASS_GUARD,
+  });
+```
+
+- [ ] **Step 7: Honour it in the top bar**
+
+In `src/components/Nav.tsx`, change:
+```tsx
+import { useSession } from "@/lib/useSession";
+```
+to:
+```tsx
+import { useSession } from "@/lib/useSession";
+import { E2E_BYPASS_GUARD } from "@/lib/config";
+```
+
+and change:
+```tsx
+  const status = useSession();
+```
+to:
+```tsx
+  const status = useSession();
+  const signedIn = status === "signed-in" || E2E_BYPASS_GUARD;
+```
+
+then change the two conditions:
+```tsx
+        {status === "signed-in" && (
+```
+to:
+```tsx
+        {signedIn && (
+```
+and:
+```tsx
+        {status === "signed-out" && (
+```
+to:
+```tsx
+        {!signedIn && status === "signed-out" && (
+```
+
+- [ ] **Step 8: Set the flag for the e2e web server**
+
+In `playwright.config.ts`, change:
+```ts
+      env: { PORT: String(PORT), NEXT_PUBLIC_API_URL: `http://localhost:${API_PORT}` },
+```
+to:
+```ts
+      env: {
+        PORT: String(PORT),
+        NEXT_PUBLIC_API_URL: `http://localhost:${API_PORT}`,
+        NEXT_PUBLIC_E2E_BYPASS_GUARD: "1",
+      },
+```
+
+- [ ] **Step 9: Typecheck and run the full suite**
+
+Run: `npx tsc --noEmit`
+Expected: no errors.
+
+Run: `npx vitest run`
+Expected: all tests pass — 36 total (the previous 32 plus the 4 new `isGatedPath` cases).
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add src/lib/config.ts src/lib/routes.ts src/components/RequireAuth.tsx src/components/Nav.tsx playwright.config.ts tests/routes.test.ts
+git commit -m "test(e2e): add test-only guard bypass for private-route specs"
+```
+
 ## Manual Verification (after all tasks)
 
 Both servers must be running: backend on `:8000`, frontend on `:3000`.

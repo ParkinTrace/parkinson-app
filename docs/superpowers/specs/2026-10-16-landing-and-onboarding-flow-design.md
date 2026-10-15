@@ -121,6 +121,22 @@ Consumers: `src/app/page.tsx` (redirect decision) and `src/app/layer/page.tsx` (
 - While the session state is `"loading"` on a private route → render nothing, so private content
   never flashes before the redirect resolves.
 
+### Test-only bypass
+
+The guard breaks the existing Playwright specs (`e2e/session.spec.ts`,
+`e2e/analysis.spec.ts`, `e2e/layer2-workflows.spec.ts`), which visit private routes with no
+session because the app previously had no access control.
+
+A single env-derived flag, `E2E_BYPASS_GUARD` (from `NEXT_PUBLIC_E2E_BYPASS_GUARD`), makes the
+client treat a visitor as signed in. It is:
+
+- set only by `playwright.config.ts` in the `next dev` web server's environment;
+- hard-disabled when `NODE_ENV === "production"`, so a stray production build cannot honour it;
+- consumed at exactly two decision points — the route guard and the top bar.
+
+This is a test affordance, not a security control. The guard is client-side UX; it was never a
+trust boundary, and it stays that way.
+
 ## Change E — Onboarding wording (`src/app/layer/page.tsx`)
 
 One line per layer, as requested:
