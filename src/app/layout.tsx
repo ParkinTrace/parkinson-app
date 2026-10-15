@@ -3,6 +3,7 @@ import "./globals.css";
 import { TopBar } from "@/components/Nav";
 import { Disclaimer } from "@/components/ui";
 import { StoreHydrator } from "@/store/useAppStore";
+import { RequireAuth } from "@/components/RequireAuth";
 
 export const metadata: Metadata = {
   title: "ParkinTrace — Typing-Based Motor Pattern Screening & Monitoring",
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full bg-slate-50 text-slate-900 antialiased">
         <StoreHydrator />
         <TopBar />
-        <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 py-6">
+          <RequireAuth>{children}</RequireAuth>
+        </main>
         <footer className="mx-auto max-w-5xl px-4 pb-8">
           <Disclaimer />
         </footer>
