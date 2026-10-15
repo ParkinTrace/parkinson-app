@@ -9,7 +9,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import analysis, baseline, health, insights, sessions, treatment
+from app.api.v1.endpoints import analysis, baseline, health, insights, pin, sessions, treatment
 
 router = APIRouter()
 router.include_router(health.router, tags=["health"])
@@ -18,3 +18,4 @@ router.include_router(analysis.router, tags=["analysis"])
 router.include_router(baseline.router, tags=["baseline"])
 router.include_router(insights.router, tags=["insights"])
 router.include_router(treatment.router, tags=["treatment"])
+router.include_router(pin.router, tags=["pin"])
