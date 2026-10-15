@@ -13,6 +13,17 @@ import fs from "fs";
 
 const SCREENSHOTS_DIR = path.resolve(__dirname, "screenshots");
 
+/**
+ * `/layer2` renders a "Loading personal monitoring dashboard…" placeholder
+ * until a client-side effect has read localStorage, and on the first request
+ * Turbopack also has to compile the route. Together those blow past
+ * Playwright's 5s default assertion budget, which made whichever test reached
+ * the page first fail while later ones passed. The FIRST assertion after
+ * navigation therefore gets a real budget; everything after it runs against an
+ * already-hydrated, already-compiled page and keeps the default.
+ */
+const FIRST_RENDER_TIMEOUT = 30_000;
+
 const SAMPLE_SESSION = {
   id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   started_at: new Date(Date.now() - 86400000 * 2).toISOString(),
@@ -54,7 +65,9 @@ test("Layer 2: baseline-building state, metric selection, and historical display
   await page.goto("/layer2");
 
   // 1. Verify Layer 2 title, badge, and baseline-building status
-  await expect(page.getByRole("heading", { name: /Personal Motor-Pattern Monitoring|Layer 2/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Personal Motor-Pattern Monitoring|Layer 2/ })).toBeVisible({
+    timeout: FIRST_RENDER_TIMEOUT,
+  });
   await expect(page.getByText(/Personal Baseline:/i)).toBeVisible();
   await expect(page.getByText(/Building Baseline|building/i).first()).toBeVisible();
 
@@ -64,7 +77,9 @@ test("Layer 2: baseline-building state, metric selection, and historical display
 
   // Select Flight Time
   await select.selectOption("ft_mean");
-  await expect(page.getByText("Transition delay between releasing and pressing")).toBeVisible();
+  await expect(
+    page.getByText("Transition delay between releasing one key and pressing the next"),
+  ).toBeVisible();
 
   // Select Typing Speed
   await select.selectOption("typing_speed");
@@ -86,7 +101,7 @@ test("Layer 2: treatment-event creation and pre/post comparison timeline", async
 
   // Click "+ Record Treatment Event"
   const recordBtn = page.getByRole("button", { name: /\+ Record Treatment Event/i });
-  await expect(recordBtn).toBeVisible();
+  await expect(recordBtn).toBeVisible({ timeout: FIRST_RENDER_TIMEOUT });
   await recordBtn.click();
 
   // Form should be visible
@@ -115,7 +130,7 @@ test("Layer 2: clinician longitudinal report modal rendering and print control",
   await page.goto("/layer2");
 
   const reportBtn = page.getByRole("button", { name: /Clinician Report View/i });
-  await expect(reportBtn).toBeVisible();
+  await expect(reportBtn).toBeVisible({ timeout: FIRST_RENDER_TIMEOUT });
   await reportBtn.click();
 
   // Verify modal elements are visible

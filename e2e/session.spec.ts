@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unlockSessionWithPin } from "./helpers/pin";
 
 /**
  * Browser regression suite (spec Phase 9). Cloud-dependent flows
@@ -41,7 +42,8 @@ test("onboarding has no practice session gate", async ({ page }) => {
 
 test("typing page captures real keys with no Date.now timing", async ({ page }) => {
   await page.goto("/test");
-  await page.getByRole("button", { name: "Start session" }).click();
+  // A daily session is gated behind the real 4-digit PIN setup/verify flow.
+  await unlockSessionWithPin(page);
   const box = page.locator("textarea");
   await box.click();
   await page.keyboard.type("the quick brown fox jumps over", { delay: 60 });

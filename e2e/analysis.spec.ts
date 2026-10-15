@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unlockSessionWithPin } from "./helpers/pin";
 
 /**
  * Local integration E2E (Phases 13/14/16/18 without cloud): real Chromium
@@ -31,7 +32,8 @@ test("backend health is fail-closed and explicit", async ({ request }) => {
 
 test("real typing session → same sessionId → real Layer 1 insight", async ({ page }) => {
   await page.goto("/test");
-  await page.getByRole("button", { name: "Start session" }).click();
+  // A daily session is gated behind the real 4-digit PIN setup/verify flow.
+  await unlockSessionWithPin(page);
   await page.locator("textarea").click();
   await page.keyboard.type(
     "the morning light moves slowly across the quiet garden wall and river stones",
