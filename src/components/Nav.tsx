@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui";
 import { useAppStore } from "@/store/useAppStore";
 import { useSession } from "@/lib/useSession";
+import { E2E_BYPASS_GUARD } from "@/lib/config";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -17,6 +18,7 @@ export function TopBar() {
   const setLayer = useAppStore((s) => s.setLayer);
   const pathname = usePathname();
   const status = useSession();
+  const signedIn = status === "signed-in" || E2E_BYPASS_GUARD;
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -26,7 +28,7 @@ export function TopBar() {
           <p className="font-bold text-slate-900">ParkinTrace</p>
           <p className="text-xs text-slate-500">Typing-pattern screening &amp; monitoring</p>
         </div>
-        {status === "signed-in" && (
+        {signedIn && (
           <nav className="flex items-center gap-1" aria-label="Primary">
             {LINKS.map((l) => {
               const isLayerLink = l.href === "/layer1" || l.href === "/layer2";
@@ -53,7 +55,7 @@ export function TopBar() {
             })}
           </nav>
         )}
-        {status === "signed-out" && (
+        {!signedIn && status === "signed-out" && (
           <nav className="flex items-center gap-2" aria-label="Account">
             <Link
               href="/login"

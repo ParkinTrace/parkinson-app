@@ -27,7 +27,11 @@ export default defineConfig({
       url: `http://localhost:${PORT}`,
       reuseExistingServer: false,
       timeout: 180_000,
-      env: { PORT: String(PORT), NEXT_PUBLIC_API_URL: `http://localhost:${API_PORT}` },
+      env: {
+        PORT: String(PORT),
+        NEXT_PUBLIC_API_URL: `http://localhost:${API_PORT}`,
+        NEXT_PUBLIC_E2E_BYPASS_GUARD: "1",
+      },
     },
   ],
 });

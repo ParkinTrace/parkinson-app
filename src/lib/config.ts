@@ -13,3 +13,8 @@ export const isApiConfigured = API_URL.length > 0;
 
 export const DISCLAIMER =
   "ParkinTrace is a research screening and monitoring aid. It is not a medical device and its output is not a diagnosis.";
+
+// Test-only: Playwright sets NEXT_PUBLIC_E2E_BYPASS_GUARD so private pages
+// render without a real session. Never honoured in a production build.
+export const E2E_BYPASS_GUARD =
+  process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_E2E_BYPASS_GUARD === "1";

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { isSupabaseConfigured } from "@/lib/config";
-import { isPublicPath } from "@/lib/routes";
+import { E2E_BYPASS_GUARD, isSupabaseConfigured } from "@/lib/config";
+import { isGatedPath } from "@/lib/routes";
 import { useSession } from "@/lib/useSession";
 
 /** Sends signed-out visitors to "/" for every private path. In demo mode
@@ -12,7 +12,10 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const status = useSession();
 
-  const gated = isSupabaseConfigured && !isPublicPath(pathname);
+  const gated = isGatedPath(pathname, {
+    supabaseConfigured: isSupabaseConfigured,
+    bypassGuard: E2E_BYPASS_GUARD,
+  });
 
   useEffect(() => {
     if (gated && status === "signed-out") router.replace("/");
