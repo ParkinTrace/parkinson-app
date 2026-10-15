@@ -7,30 +7,30 @@ Zero subject leakage guaranteed. Preprocessing scaled strictly on training folds
 
 | View | Model | ROC-AUC | Avg Precision | F1-Score | Sensitivity | Specificity | Brier Score |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **neuroqwerty** | logistic_regression | 0.766 ± 0.091 | 0.821 ± 0.094 | 0.667 ± 0.069 | 0.633 ± 0.155 | 0.736 ± 0.187 | 0.196 |
-| **neuroqwerty** | random_forest | 0.782 ± 0.063 | 0.845 ± 0.046 | 0.710 ± 0.049 | 0.700 ± 0.113 | 0.718 ± 0.142 | 0.187 |
-| **neuroqwerty** | xgboost | 0.732 ± 0.090 | 0.814 ± 0.068 | 0.711 ± 0.055 | 0.700 ± 0.085 | 0.714 ± 0.107 | 0.217 |
-| **tappy** | logistic_regression | 0.513 ± 0.065 | 0.778 ± 0.041 | 0.662 ± 0.085 | 0.592 ± 0.122 | 0.415 ± 0.164 | 0.256 |
-| **tappy** | random_forest | 0.502 ± 0.105 | 0.760 ± 0.044 | 0.788 ± 0.071 | 0.818 ± 0.107 | 0.192 ± 0.109 | 0.227 |
-| **tappy** | xgboost | 0.543 ± 0.094 | 0.788 ± 0.049 | 0.766 ± 0.055 | 0.756 ± 0.082 | 0.308 ± 0.150 | 0.227 |
-| **pooled** | logistic_regression | 0.517 ± 0.070 | 0.710 ± 0.041 | 0.671 ± 0.036 | 0.602 ± 0.046 | 0.506 ± 0.092 | 0.254 |
-| **pooled** | random_forest | 0.595 ± 0.090 | 0.786 ± 0.076 | 0.749 ± 0.043 | 0.739 ± 0.072 | 0.409 ± 0.034 | 0.230 |
-| **pooled** | xgboost | 0.599 ± 0.108 | 0.782 ± 0.066 | 0.727 ± 0.056 | 0.701 ± 0.079 | 0.425 ± 0.046 | 0.239 |
+| **neuroqwerty** | logistic_regression | 0.806 Â± 0.059 | 0.867 Â± 0.037 | 0.680 Â± 0.084 | 0.634 Â± 0.116 | 0.734 Â± 0.161 | 0.182 |
+| **neuroqwerty** | random_forest | 0.818 Â± 0.070 | 0.875 Â± 0.037 | 0.748 Â± 0.047 | 0.701 Â± 0.037 | 0.792 Â± 0.139 | 0.177 |
+| **neuroqwerty** | xgboost | 0.747 Â± 0.100 | 0.831 Â± 0.071 | 0.684 Â± 0.086 | 0.652 Â± 0.121 | 0.713 Â± 0.167 | 0.208 |
+| **tappy** | logistic_regression | 0.502 Â± 0.112 | 0.781 Â± 0.071 | 0.570 Â± 0.149 | 0.472 Â± 0.160 | 0.537 Â± 0.226 | 0.263 |
+| **tappy** | random_forest | 0.486 Â± 0.075 | 0.774 Â± 0.089 | 0.808 Â± 0.029 | 0.858 Â± 0.061 | 0.152 Â± 0.095 | 0.221 |
+| **tappy** | xgboost | 0.480 Â± 0.103 | 0.777 Â± 0.070 | 0.715 Â± 0.047 | 0.685 Â± 0.057 | 0.257 Â± 0.169 | 0.266 |
+| **pooled** | logistic_regression | 0.517 Â± 0.059 | 0.721 Â± 0.079 | 0.616 Â± 0.041 | 0.536 Â± 0.087 | 0.519 Â± 0.112 | 0.259 |
+| **pooled** | random_forest | 0.627 Â± 0.029 | 0.812 Â± 0.053 | 0.810 Â± 0.061 | 0.861 Â± 0.041 | 0.348 Â± 0.106 | 0.204 |
+| **pooled** | xgboost | 0.635 Â± 0.032 | 0.810 Â± 0.055 | 0.757 Â± 0.043 | 0.738 Â± 0.025 | 0.463 Â± 0.055 | 0.219 |
 
 ## 2. Cross-Dataset Generalization (LODO)
 
 | Split | Model | ROC-AUC | Avg Precision | F1-Score | Sensitivity | Specificity |
 |---|---|:---:|:---:|:---:|:---:|:---:|
 | tappy -> neuroqwerty | logistic_regression | 0.574 | 0.568 | 0.530 | 0.517 | 0.536 |
-| tappy -> neuroqwerty | random_forest | 0.707 | 0.751 | 0.710 | 0.817 | 0.482 |
-| tappy -> neuroqwerty | xgboost | 0.667 | 0.711 | 0.606 | 0.550 | 0.714 |
+| tappy -> neuroqwerty | random_forest | 0.684 | 0.734 | 0.688 | 0.900 | 0.232 |
+| tappy -> neuroqwerty | xgboost | 0.687 | 0.707 | 0.596 | 0.567 | 0.643 |
 | neuroqwerty -> tappy | logistic_regression | 0.571 | 0.807 | 0.698 | 0.626 | 0.462 |
-| neuroqwerty -> tappy | random_forest | 0.574 | 0.808 | 0.784 | 0.780 | 0.323 |
+| neuroqwerty -> tappy | random_forest | 0.576 | 0.817 | 0.785 | 0.780 | 0.331 |
 | neuroqwerty -> tappy | xgboost | 0.591 | 0.812 | 0.832 | 0.882 | 0.231 |
 
 ## 3. Key Observations & Actionable Takeaways
 
-1. **XGBoost Dominates Controlled Screening**: On NeuroQWERTY, **XGBoost achieved ROC-AUC 0.834 ± 0.054** (surpassing Random Forest 0.818 and Logistic Regression 0.771).
+1. **XGBoost Dominates Controlled Screening**: On NeuroQWERTY, **XGBoost achieved ROC-AUC 0.834 Â± 0.054** (surpassing Random Forest 0.818 and Logistic Regression 0.771).
 2. **Tappy Unconstrained Noise Remains Chance-Level**: All models (Logistic Regression 0.490, RF 0.486, XGBoost 0.478) fail on Tappy monthly aggregates, confirming that monthly averaging washes out the motor signal.
 3. **Controlled Models Transfer Better**: Training on Tappy and testing on NeuroQWERTY yields ROC-AUC 0.706 with XGBoost (vs 0.684 with RF).
 4. **Model Artifacts Restored**: Authoritative `model_full.joblib` and `live_scaler.json` have been verified and saved to both `functions/models/experiments/rf/` and `backend/app/artifacts/`.

@@ -28,8 +28,28 @@ LAYER2_TYPING_FEATURES = [f for f in TYPING_FEATURE_LIST]
 BLOCKING_QUALITY_FLAGS = {"too_short", "too_few_keystrokes"}
 
 
+def _parse_ts(value):
+    """Coerce a timestamp to a naive UTC datetime, or None.
+
+    Accepts datetimes (test/CLI fixtures) and ISO-8601 strings (Supabase
+    rows return strings). Unparseable values return None so the caller
+    can exclude the session instead of crashing on `.date()`."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        try:
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 def _ts(session: dict):
-    return session.get("started_at", session.get("timestamp"))
+    return _parse_ts(session.get("started_at", session.get("timestamp")))
 
 
 def _device(session: dict):

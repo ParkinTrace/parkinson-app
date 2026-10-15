@@ -131,7 +131,13 @@ def _load():
             background = frame[features].dropna().sample(
                 n=min(N_BACKGROUND, len(frame)), random_state=42)
         else:
-            background = pd.DataFrame([[0.0] * len(features)], columns=features)
+            # No reference cohort available. A zero background would make
+            # every "reference median" 0 and label every feature as "higher
+            # than reference median" — misleading text. Degrade to no
+            # explanations instead; Layer 1 scoring is unaffected.
+            raise FileNotFoundError(
+                "Reference cohort CSV not found for SHAP background: "
+                f"{HARMONIZED_CSV}")
 
         try:
             import shap

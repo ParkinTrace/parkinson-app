@@ -62,12 +62,19 @@ export function RhythmChart({ series }: { series: WithinSessionSeries | null }) 
       </Card>
     );
   }
-  const data = series.elapsed_ms.map((t, i) => ({
-    t: Math.round(t),
-    ht: series.rolling_ht_ms[i] != null ? +series.rolling_ht_ms[i].toFixed(1) : null,
-    ft: series.rolling_ft_ms[i] != null ? +series.rolling_ft_ms[i].toFixed(1) : null,
-    ikl: series.rolling_ikl_ms[i] != null ? +series.rolling_ikl_ms[i].toFixed(1) : null,
-  }));
+  // hold series is indexed by keystroke i. flight/IKL describe the
+  // transition INTO keystroke i, so they are stored one shorter and must
+  // be offset by one to line up with the same elapsed_ms axis.
+  const data = series.elapsed_ms.map((t, i) => {
+    const ft = series.rolling_ft_ms[i - 1];
+    const ikl = series.rolling_ikl_ms[i - 1];
+    return {
+      t: Math.round(t),
+      ht: series.rolling_ht_ms[i] != null ? +series.rolling_ht_ms[i].toFixed(1) : null,
+      ft: ft != null ? +ft.toFixed(1) : null,
+      ikl: ikl != null ? +ikl.toFixed(1) : null,
+    };
+  });
   return (
     <Card>
       <h3 className="font-semibold">Typing rhythm during this session</h3>

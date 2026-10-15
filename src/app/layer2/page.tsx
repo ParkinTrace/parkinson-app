@@ -10,6 +10,27 @@ import { supabaseBrowser } from "@/lib/supabaseClient";
 import { API_URL } from "@/lib/config";
 import type { ClinicianReport, SessionRow, TreatmentComparison, TreatmentEvent } from "@/lib/types";
 
+/** Robust z-score cut used for the scorecard state, matching the backend
+ *  Layer 2 engine (ROBUST_Z_WATCH in app/core/constants.py). */
+const ROBUST_Z_WATCH = 2.0;
+
+/** A value is flagged only when it sits ROBUST_Z_WATCH robust SDs away
+ *  from the user's OWN frozen baseline median/MAD. No clinical cutoff is
+ *  hardcoded. Without a baseline the state is unknown. */
+type BaselineStat = { median: number; mad: number };
+
+/** "unknown" when the session has no value; "elevated" when the value is
+ *  ROBUST_Z_WATCH robust SDs above the personal baseline; else "normal". */
+function metricState(
+  value: number | null,
+  stat: BaselineStat | undefined,
+): "unknown" | "normal" | "elevated" {
+  if (value === null) return "unknown";
+  if (!stat || !stat.mad) return "unknown";
+  const robustZ = (value - stat.median) / (1.4826 * stat.mad);
+  return robustZ >= ROBUST_Z_WATCH ? "elevated" : "normal";
+}
+
 const INDICATOR_OPTIONS = [
   { key: "ht_mean", label: "Hold Time (ms)", desc: "Average duration key is held down (primary indicator of fine-motor bradykinesia)" },
   { key: "ft_mean", label: "Flight Time (ms)", desc: "Transition delay between releasing one key and pressing the next" },
@@ -32,7 +53,8 @@ function generateDemoData() {
   const ftValues = [98.1, 99.4, 97.5, 101.2, 99.0, 98.6, 102.1, 100.5, 99.2, 98.0, 91.2, 90.5];
   const iklValues = [182.3, 184.5, 181.4, 187.2, 184.5, 183.4, 189.3, 186.9, 184.2, 182.3, 167.7, 166.3];
   const speeds = [5.12, 5.08, 5.15, 4.95, 5.05, 5.10, 4.90, 4.98, 5.06, 5.14, 5.58, 5.62];
-  const asyms = [3.2, 2.9, 3.4, 4.1, 3.0, 3.3, 4.5, 3.8, 3.2, 3.1, 2.2, 2.0];
+  // Ratios (abs(L-R)/max(L,R)), same unit the extractor emits — not ms.
+  const asyms = [0.032, 0.029, 0.034, 0.041, 0.030, 0.033, 0.045, 0.038, 0.032, 0.031, 0.022, 0.020];
   const pauses = [0.8, 0.9, 0.7, 1.2, 0.8, 0.8, 1.4, 1.0, 0.8, 0.7, 0.4, 0.3];
   const consistencies = [0.13, 0.14, 0.12, 0.16, 0.13, 0.14, 0.17, 0.15, 0.13, 0.12, 0.09, 0.08];
 
@@ -94,6 +116,7 @@ function generateDemoData() {
     post_date_range: [demoSessions[10].started_at, demoSessions[11].started_at],
     feature_comparisons: [
       { feature: "ht_mean", human_name: "Hold Time", pre_median: 85.0, post_median: 76.15, difference: -8.85, percent_change: -10.4 },
+      { feature: "hand_asymmetry", human_name: "Hand Asymmetry", pre_median: 0.0355, post_median: 0.021, difference: -0.0145, percent_change: -40.8 },
       { feature: "ft_mean", human_name: "Flight Time", pre_median: 99.0, post_median: 90.85, difference: -8.15, percent_change: -8.2 },
       { feature: "ikl_mean", human_name: "Inter-Key Latency", pre_median: 184.2, post_median: 167.0, difference: -17.2, percent_change: -9.3 },
       { feature: "typing_speed", human_name: "Typing Speed", pre_median: 5.06, post_median: 5.60, difference: 0.54, percent_change: 10.7 },
@@ -106,7 +129,7 @@ function generateDemoData() {
     ft_mean: { median: 99.0, mad: 1.2 },
     ikl_mean: { median: 184.2, mad: 1.8 },
     typing_speed: { median: 5.06, mad: 0.08 },
-    hand_asymmetry: { median: 3.2, mad: 0.3 },
+    hand_asymmetry: { median: 0.032, mad: 0.003 },
     pause_frequency: { median: 0.8, mad: 0.1 },
     session_consistency: { median: 0.13, mad: 0.01 },
   };
@@ -350,20 +373,44 @@ export default function Layer2Page() {
   const selectedOption = INDICATOR_OPTIONS.find((o) => o.key === selectedMetric) ?? INDICATOR_OPTIONS[0];
   const currentBaselineMedian = baselineStats?.[selectedMetric]?.median ?? null;
 
-  // Compute latest neuromotor values for the Clinical Scorecard
+  // Latest neuromotor values for the scorecard. Missing values stay null —
+  // the UI shows "—" rather than inventing a plausible-looking number.
   const latestSession = sessions[sessions.length - 1];
   const latestFeats = latestSession?.features ?? {};
-  const latestHt = typeof latestFeats.ht_mean === "number" ? latestFeats.ht_mean : (currentBaselineMedian ?? 85.0);
-  const latestIkl = typeof latestFeats.ikl_mean === "number" ? latestFeats.ikl_mean : 180.0;
-  const latestAsym = typeof latestFeats.hand_asymmetry === "number" ? Math.abs(latestFeats.hand_asymmetry) : 2.5;
-  const latestSpeed = typeof latestFeats.typing_speed === "number" ? latestFeats.typing_speed : 5.1;
-  const latestConsistency = typeof latestFeats.session_consistency === "number" ? latestFeats.session_consistency : 0.12;
-  const latestPauses = typeof latestFeats.pause_frequency === "number" ? latestFeats.pause_frequency : 0.8;
+  const num = (v: number | null | undefined): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+  const latestHt = num(latestFeats.ht_mean);
+  const latestAsym = num(latestFeats.hand_asymmetry);
+  const latestConsistency = num(latestFeats.session_consistency);
+  const latestPauses = num(latestFeats.pause_frequency);
+
+  // Each scorecard metric is judged against the user's OWN frozen baseline
+  // with the same robust-z rule the backend engine uses. No global cutoff.
+  const states = {
+    ht: metricState(latestHt, baselineStats?.ht_mean),
+    consistency: metricState(latestConsistency, baselineStats?.session_consistency),
+    asymmetry: metricState(
+      latestAsym === null ? null : Math.abs(latestAsym),
+      baselineStats?.hand_asymmetry,
+    ),
+    pauses: metricState(latestPauses, baselineStats?.pause_frequency),
+  };
+
+  const stateDot = {
+    unknown: "bg-slate-300",
+    normal: "bg-emerald-500",
+    elevated: "bg-amber-500",
+  } as const;
+  const stateLabel = {
+    unknown: "No baseline reference",
+    normal: "Within personal range",
+    elevated: "Above personal range",
+  } as const;
 
   // Determine clinical conclusion state
   const isBaselineEstablished = progress.status === "established" || isDemoActive;
-  const htDiffFromBaseline = currentBaselineMedian !== null ? latestHt - currentBaselineMedian : 0;
-  const isDriftDetected = isBaselineEstablished && (htDiffFromBaseline > 15 || latestAsym > 15);
+  const isDriftDetected =
+    isBaselineEstablished && Object.values(states).some((s) => s === "elevated");
 
   let conclusionBadge = { text: "CALIBRATING INDIVIDUAL BASELINE", color: "bg-blue-100 text-blue-800 border-blue-200" };
   let conclusionHeadline = "Establishing Personal Motor Reference Profile";
@@ -446,13 +493,11 @@ export default function Layer2Page() {
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Bradykinesia Index</span>
               <span className="text-xs">⏱️</span>
             </div>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestHt.toFixed(0)} <span className="text-xs font-normal text-slate-500">ms HT</span></p>
+            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestHt === null ? "—" : latestHt.toFixed(0)} <span className="text-xs font-normal text-slate-500">ms HT</span></p>
             <p className="text-[11px] text-slate-500">Hold Duration</p>
             <div className="mt-2 flex items-center gap-1">
-              <span className={`inline-block h-2 w-2 rounded-full ${latestHt < 95 ? "bg-emerald-500" : "bg-amber-500"}`} />
-              <span className="text-[11px] font-medium text-slate-700">
-                {latestHt < 95 ? "Prompt key release" : "Prolonged hold"}
-              </span>
+              <span className={`inline-block h-2 w-2 rounded-full ${stateDot[states.ht]}`} />
+              <span className="text-[11px] font-medium text-slate-700">{stateLabel[states.ht]}</span>
             </div>
           </div>
 
@@ -462,13 +507,11 @@ export default function Layer2Page() {
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Rhythm Steadiness</span>
               <span className="text-xs">📈</span>
             </div>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestConsistency.toFixed(2)} <span className="text-xs font-normal text-slate-500">CV</span></p>
+            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestConsistency === null ? "—" : latestConsistency.toFixed(2)} <span className="text-xs font-normal text-slate-500">CV</span></p>
             <p className="text-[11px] text-slate-500">Cadence Variation</p>
             <div className="mt-2 flex items-center gap-1">
-              <span className={`inline-block h-2 w-2 rounded-full ${latestConsistency <= 0.16 ? "bg-emerald-500" : "bg-amber-500"}`} />
-              <span className="text-[11px] font-medium text-slate-700">
-                {latestConsistency <= 0.16 ? "Stable cadence" : "Fluctuating rhythm"}
-              </span>
+              <span className={`inline-block h-2 w-2 rounded-full ${stateDot[states.consistency]}`} />
+              <span className="text-[11px] font-medium text-slate-700">{stateLabel[states.consistency]}</span>
             </div>
           </div>
 
@@ -478,13 +521,11 @@ export default function Layer2Page() {
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Bilateral Symmetry</span>
               <span className="text-xs">⚖️</span>
             </div>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestAsym.toFixed(1)} <span className="text-xs font-normal text-slate-500">ms</span></p>
+            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestAsym === null ? "—" : (Math.abs(latestAsym) * 100).toFixed(1)} <span className="text-xs font-normal text-slate-500">%</span></p>
             <p className="text-[11px] text-slate-500">Left vs Right Delta</p>
             <div className="mt-2 flex items-center gap-1">
-              <span className={`inline-block h-2 w-2 rounded-full ${latestAsym < 10 ? "bg-emerald-500" : "bg-amber-500"}`} />
-              <span className="text-[11px] font-medium text-slate-700">
-                {latestAsym < 10 ? "Symmetric balance" : "Unilateral divergence"}
-              </span>
+              <span className={`inline-block h-2 w-2 rounded-full ${stateDot[states.asymmetry]}`} />
+              <span className="text-[11px] font-medium text-slate-700">{stateLabel[states.asymmetry]}</span>
             </div>
           </div>
 
@@ -494,13 +535,11 @@ export default function Layer2Page() {
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Motor Hesitation</span>
               <span className="text-xs">⏸️</span>
             </div>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestPauses.toFixed(1)} <span className="text-xs font-normal text-slate-500">/min</span></p>
+            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestPauses === null ? "—" : latestPauses.toFixed(1)} <span className="text-xs font-normal text-slate-500">/min</span></p>
             <p className="text-[11px] text-slate-500">Pauses &gt; 500ms</p>
             <div className="mt-2 flex items-center gap-1">
-              <span className={`inline-block h-2 w-2 rounded-full ${latestPauses < 2.5 ? "bg-emerald-500" : "bg-amber-500"}`} />
-              <span className="text-[11px] font-medium text-slate-700">
-                {latestPauses < 2.5 ? "Fluid pace" : "Elevated pauses"}
-              </span>
+              <span className={`inline-block h-2 w-2 rounded-full ${stateDot[states.pauses]}`} />
+              <span className="text-[11px] font-medium text-slate-700">{stateLabel[states.pauses]}</span>
             </div>
           </div>
         </div>
