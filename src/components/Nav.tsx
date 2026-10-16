@@ -20,6 +20,13 @@ export function TopBar() {
   const status = useSession();
   const signedIn = status === "signed-in" || E2E_BYPASS_GUARD;
 
+  /* The header is chrome for the app itself. The landing page, the two auth
+     pages and the onboarding funnel each own the action the user came there
+     to take, so an app nav (or a second Log in / Sign up) up here just puts
+     the same control on the screen twice. */
+  const PUBLIC_ROUTES = ["/", "/login", "/signup", "/consent", "/demographics", "/layer"];
+  const inApp = !PUBLIC_ROUTES.includes(pathname);
+
   return (
     <header className="sticky top-0 z-30 border-b border-hair bg-paper/85 backdrop-blur-sm">
       <div className="mx-auto flex max-w-5xl items-center gap-4 px-5 py-3">
@@ -32,7 +39,7 @@ export function TopBar() {
         </Link>
 
         <div className="ml-auto">
-          {signedIn && (
+          {signedIn && inApp && (
             <nav
               className="flex items-center gap-0.5 rounded-md border border-hair bg-canvas p-0.5"
               aria-label="Primary"
@@ -65,9 +72,10 @@ export function TopBar() {
             </nav>
           )}
 
-          {/* The landing page carries its own auth panel, so repeating the
-              two actions in the header would just duplicate them. */}
-          {!signedIn && status === "signed-out" && pathname !== "/" && (
+          {/* Only shown to a signed-out visitor sitting on an app route that
+              the guard has not bounced yet — a way back in, not a second
+              copy of the buttons the auth pages already have. */}
+          {!signedIn && status === "signed-out" && inApp && (
             <nav className="flex items-center gap-1" aria-label="Account">
               <Link
                 href="/login"
