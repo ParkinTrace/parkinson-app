@@ -134,14 +134,9 @@ export default function LandingPage() {
 
             <div className="mt-4 flex flex-col gap-2">
               {account === "complete" ? (
-                <>
-                  <PrimaryButton onClick={() => router.push("/dashboard")}>
-                    Go to dashboard
-                  </PrimaryButton>
-                  <SecondaryButton onClick={() => router.push("/test")}>
-                    New typing session
-                  </SecondaryButton>
-                </>
+                <PrimaryButton onClick={() => router.push("/dashboard")}>
+                  Go to dashboard
+                </PrimaryButton>
               ) : signedIn ? (
                 <PrimaryButton onClick={() => router.push("/consent")}>
                   Resume setup

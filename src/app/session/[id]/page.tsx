@@ -3,7 +3,8 @@ import { use, useEffect, useState } from "react";
 import { Card, EmptyState, PageHeader, Readout, SecondaryButton, StatusBadge } from "@/components/ui";
 import { RhythmChart } from "@/components/charts";
 import { LayerOneComplete } from "@/components/LayerOneComplete";
-import { fetchSessionExact } from "@/lib/session";
+import { baselineStanding, type BaselineStanding } from "@/lib/baseline";
+import { fetchHistory, fetchSessionExact, stableDeviceId } from "@/lib/session";
 import { loadSnapshot, type Snapshot } from "@/lib/localCache";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { SessionNotFoundError } from "@/lib/types";
@@ -16,6 +17,7 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState("");
+  const [standing, setStanding] = useState<BaselineStanding | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -55,6 +57,17 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
     run();
   }, [id]);
 
+  /* Which one this was. A persisted session belongs to an account and so to
+     Layer 2, where "session 3 of 10" is a real answer; an unsigned session is a
+     one-off screening and is numbered by nothing. */
+  const persisted = snap?.persisted ?? false;
+  useEffect(() => {
+    if (!persisted) return;
+    fetchHistory().then((history) => {
+      setStanding(baselineStanding(history, stableDeviceId()));
+    });
+  }, [persisted]);
+
   if (missing) {
     return (
       <div className="flex flex-col gap-6">
@@ -92,11 +105,17 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
   const l2 = (snap.layer2 ?? {}) as Record<string, unknown>;
   const f = snap.features;
   const ms = (v: number | null | undefined) => (typeof v === "number" ? v.toFixed(0) : "—");
+  const standingLine =
+    !snap.persisted || !standing
+      ? null
+      : standing.building
+        ? `Session ${Math.min(standing.recorded, standing.required)} of ${standing.required} · Day ${Math.min(standing.days, standing.requiredDays)} of ${standing.requiredDays}`
+        : `Session ${standing.recorded} · baseline established`;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Exact session"
+        eyebrow={snap.persisted ? "Layer 02 · Personal monitoring" : "Layer 01 · Screening"}
         title="Session insight"
         description={`${snap.startedAt.slice(0, 16).replace("T", " ")} · ${snap.sessionType} · device ${snap.deviceId}${
           snap.localPreview ? " · on-device preview (not yet analysed)" : ""
@@ -104,7 +123,10 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
         actions={<SecondaryButton href="/history">All sessions</SecondaryButton>}
       />
 
-      <p className="font-mono text-[11px] text-muted">session {snap.sessionId}</p>
+      <p className="font-mono text-[11px] text-muted">
+        {standingLine && <span className="font-semibold text-ink">{standingLine} · </span>}
+        session {snap.sessionId}
+      </p>
 
       <Card>
         <div className="flex items-center justify-between gap-3 border-b border-hair pb-3">

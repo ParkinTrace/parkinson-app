@@ -7,7 +7,8 @@ import { PinInputModal } from "@/components/PinInputModal";
 import { PinSetupModal } from "@/components/PinSetupModal";
 import { useTypingCapture } from "@/hooks/useTypingCapture";
 import { extractTypingFeatures, withinSessionSeries } from "@/lib/features";
-import { newSessionId, persistAndAnalyze, stableDeviceId } from "@/lib/session";
+import { baselineStanding, type BaselineStanding } from "@/lib/baseline";
+import { fetchHistory, newSessionId, persistAndAnalyze, stableDeviceId } from "@/lib/session";
 import { savePending, saveSnapshot, type Snapshot } from "@/lib/localCache";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { isApiConfigured } from "@/lib/config";
@@ -63,6 +64,8 @@ export default function TypingTestPage() {
      account — which means Layer 2 — every session is locked. */
   const status = useSession();
   const locked = pinRequired(status);
+  const signedIn = status === "signed-in";
+  const [standing, setStanding] = useState<BaselineStanding | null>(null);
 
   const sessionIdRef = useRef<string>(newSessionId());
   const t0Ref = useRef<number>(0);
@@ -72,6 +75,17 @@ export default function TypingTestPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPinVerified(isSessionUnlocked());
   }, []);
+
+  /* Layer 2 only: which session this will be, and which recording day. A
+     session recorded in an account joins that account's baseline, so the
+     numbers exist; an unsigned Layer 1 screening is a single reading, and a
+     count there would be noise. */
+  useEffect(() => {
+    if (!signedIn) return;
+    fetchHistory().then((history) => {
+      setStanding(baselineStanding(history, stableDeviceId()));
+    });
+  }, [signedIn]);
 
   useEffect(() => {
     if (!active) return;
@@ -219,9 +233,13 @@ export default function TypingTestPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader
-        eyebrow="Measurement"
+        eyebrow={signedIn ? "Layer 02 · Personal monitoring" : "Layer 01 · Screening"}
         title="Typing session"
-        description={`Type the prompt below at your normal pace. This is a real measured session — timing is recorded, the text is discarded. A valid session needs at least ${MIN_SECONDS} seconds and ${MIN_KEYS} keystrokes.`}
+        description={
+          signedIn
+            ? `Type the prompt below at your normal pace. This session is recorded on your account and read against your own baseline. A valid session needs at least ${MIN_SECONDS} seconds and ${MIN_KEYS} keystrokes.`
+            : `Type the prompt below at your normal pace. This is a one-off screening read against a research population — no account, and nothing is kept about the words you type. A valid session needs at least ${MIN_SECONDS} seconds and ${MIN_KEYS} keystrokes.`
+        }
         actions={
           locked ? (
             <button
@@ -234,6 +252,33 @@ export default function TypingTestPage() {
           ) : undefined
         }
       />
+
+      {/* Which session this is, before it is typed rather than after. */}
+      {signedIn && (
+        <div className="mt-6 flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-lg border border-hair bg-canvas px-4 py-3">
+          {standing ? (
+            <>
+              <span className="font-mono text-sm font-semibold tabular-nums text-ink">
+                {standing.building
+                  ? `Session ${Math.min(standing.next, standing.required)} of ${standing.required}`
+                  : `Session ${standing.next}`}
+              </span>
+              <span className="label">
+                {standing.building
+                  ? `Day ${Math.min(standing.daysWithToday, standing.requiredDays)} of ${standing.requiredDays}`
+                  : "baseline established"}
+              </span>
+              <span className="text-xs leading-relaxed text-muted">
+                {standing.recordedToday
+                  ? "You have already recorded today — this one adds to the session count, not the day count."
+                  : "Read against your own baseline."}
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-muted">Reading your record…</span>
+          )}
+        </div>
+      )}
 
       <Card className="mt-6">
         <p className="label">Type this</p>

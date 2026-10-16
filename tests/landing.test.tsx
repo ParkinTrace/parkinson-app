@@ -70,7 +70,9 @@ describe("landing page", () => {
     render(<LandingPage />);
 
     expect(await screen.findByRole("button", { name: /Go to dashboard/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /New typing session/i })).toBeTruthy();
+    // The landing is the front door: it hands you to the dashboard rather than
+    // starting a session itself.
+    expect(screen.queryByRole("button", { name: /New typing session/i })).toBeNull();
     // The sign-up walkthrough is advice for someone who has not signed up.
     expect(screen.queryByText(/What happens next/i)).toBeNull();
     expect(h.replace).not.toHaveBeenCalled();

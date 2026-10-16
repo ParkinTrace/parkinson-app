@@ -42,3 +42,41 @@ export function baselineProgress(sessions: SessionRow[], deviceId: string): Base
     distinctDays: days, requiredDays: 5, anchorDevice: anchor,
   };
 }
+
+export interface BaselineStanding {
+  building: boolean;
+  /** Valid sessions recorded so far. */
+  recorded: number;
+  /** The number of the session about to be recorded (1-based). */
+  next: number;
+  /** Recording days so far. */
+  days: number;
+  /** Recording days counting today, if today is not already recorded. */
+  daysWithToday: number;
+  required: number;
+  requiredDays: number;
+  recordedToday: boolean;
+}
+
+/**
+ * Where you are in your own baseline, in the two numbers that move
+ * independently: sessions and recording days. Two sessions in one day advance
+ * the first and not the second, which is the whole reason a baseline needs
+ * several visits — so a single "3 of 10" would hide the part that matters.
+ */
+export function baselineStanding(rows: SessionRow[], deviceId: string): BaselineStanding {
+  const p = baselineProgress(rows, deviceId);
+  const valid = rows.filter((s) => s.valid !== false);
+  const today = new Date().toISOString().slice(0, 10);
+  const recordedToday = valid.some((s) => s.started_at.slice(0, 10) === today);
+  return {
+    building: p.status === "building",
+    recorded: p.sessions,
+    next: p.sessions + 1,
+    days: p.distinctDays,
+    daysWithToday: recordedToday ? p.distinctDays : p.distinctDays + 1,
+    required: p.required,
+    requiredDays: p.requiredDays,
+    recordedToday,
+  };
+}

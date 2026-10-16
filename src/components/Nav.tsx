@@ -6,11 +6,16 @@ import { useAppStore } from "@/store/useAppStore";
 import { useSession } from "@/lib/useSession";
 import { E2E_BYPASS_GUARD } from "@/lib/config";
 
+/* The signed-in nav is the app's own table of contents, named for what the
+   visitor is looking for rather than for how it is built: the dashboard is
+   where you start, sessions are the numbered record, the two layers are the
+   two readings of the same recording, and the profile is the account. */
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/history", label: "Sessions" },
   { href: "/layer1", label: "Layer 1" },
   { href: "/layer2", label: "Layer 2" },
-  { href: "/history", label: "History" },
+  { href: "/profile", label: "Profile" },
 ];
 
 export function TopBar() {
