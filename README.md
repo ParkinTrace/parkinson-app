@@ -1,146 +1,146 @@
-# ParkinTrace — Keystroke-Dynamics Based Parkinson's Screening & Longitudinal Monitoring System
+# ParkinTrace 🌿
 
-> **Academic Research & Capstone Project** — Version 2.1.0 (Clinical Longitudinal Edition)  
-> Submitted in partial fulfillment of degree requirements.  
-> This repository is maintained for academic evaluation and clinical demonstration purposes.  
->  
-> ⚠️ **Research Aid — Not a Medical Device.** All outputs are objective digital biomarker signals for clinical discussion and longitudinal monitoring, never an autonomous medical diagnosis.
+> **Privacy-First Digital Biomarker Platform for Neuromuscular Rhythm Screening & Longitudinal Monitoring**  
+> *Research Aid & Academic Capstone — Not an Autonomous Diagnostic Device.*
+
+ParkinTrace analyzes how you naturally type on a standard computer keyboard. By measuring the microsecond duration each key is held (**Hold Time**) and the transitions between keypresses (**Flight Time**), it detects subtle variations in motor fluidity without ever recording, storing, or reading the words you type.
 
 ---
 
-## 🛠️ Complete Tech Stack Architecture
+## 🏛️ System Architecture & Workflow
 
-The ParkinTrace platform consists of a modern, decoupled three-tier architecture:
+```mermaid
+flowchart TD
+    subgraph Browser["User Browser (Next.js 16)"]
+        KBD["Standard Physical Keyboard"]
+        Timer["High-Resolution performance.now Timer"]
+        Filter["Zero-Knowledge Filter (Raw Text Dropped)"]
+        KBD --> Timer --> Filter
+    end
 
+    subgraph Screening["Screening Architecture"]
+        L1["Layer 1: Population Screening (30s)"]
+        L1_Engine["Random Forest Model (12 Kinematics)"]
+        L1_SHAP["SHAP Movement Insights"]
+        L1 --> L1_Engine --> L1_SHAP
+
+        L2["Layer 2: Personal Baseline Monitoring"]
+        L2_SPC["Statistical Drift Engine (CUSUM / EWMA)"]
+        L2_Milestones["Clinical Event Annotation (Medication / Therapy)"]
+        L2 --> L2_SPC --> L2_Milestones
+    end
+
+    subgraph Backend["FastAPI Analytics Engine (Port 8000)"]
+        API["REST API & Pydantic v2 Validation"]
+        Scaler["Live Feature Scaler & Model Artifact"]
+        API <--> Scaler
+    end
+
+    subgraph Database["Cloud Database (Supabase)"]
+        Auth["Supabase Authentication (JWT)"]
+        Postgres["PostgreSQL with Row-Level Security (RLS)"]
+        PIN["Local 4-Digit Session PIN Shield"]
+        Auth <--> Postgres
+    end
+
+    subgraph Results["Clinical Surfaces"]
+        Dashboard["Motor Health Dashboard"]
+        Timeline["Cadence Trend & Milestone Graph"]
+        Report["Clinician Summary Report View"]
+    end
+
+    Filter -->|First-Time Check| L1
+    Filter -->|Daily Longitudinal Check-in| L2
+    L1 --> API
+    L2 --> API
+    API <--> Database
+    API --> Dashboard
+    API --> Timeline
+    API --> Report
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                 NEXT.JS 16 FRONTEND APPLICATION             │
-│  - Framework: Next.js 16 (App Router, Turbopack) & React 19 │
-│  - Styling: Tailwind CSS 4 (Custom clinical design tokens)  │
-│  - Visualizations: Recharts (Rolling rhythm & time-series)  │
-│  - State & Storage: Zustand, LocalStorage Cache Fallback    │
-│  - Keystroke Capture: performance.now() high-res clock      │
-│  - Client Auth: @supabase/ssr Browser Client                │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ HTTPS / JSON REST API
-┌──────────────────────────────▼──────────────────────────────┐
-│                    FASTAPI ANALYTICS ENGINE                 │
-│  - API Framework: FastAPI (Python 3.10.11), Uvicorn ASGI   │
-│  - Validation: Pydantic v2 (Strict millisecond timing schema)│
-│  - Core ML: Scikit-learn 1.6.1 (Calibrated Random Forest)   │
-│  - Explainable AI: SHAP (TreeExplainer with background ref) │
-│  - Longitudinal Engine: CUSUM, EWMA, and Isolation Forest   │
-│  - Security: JWT claims validation with IDOR protection     │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ Supabase Service Role / RLS
-┌──────────────────────────────▼──────────────────────────────┐
-│                  SUPABASE POSTGRESQL DATABASE               │
-│  - Relational Database: PostgreSQL 15 via Supabase Cloud    │
-│  - Security: Row-Level Security (RLS) on all 5 tables       │
-│  - Authentication: Supabase Auth (JWT bearer verification)  │
-│  - Migrations: 0001_core.sql, 0002_grants, 0003_treatment   │
-│  - Privacy Protection: Zero raw typed text stored           │
-└─────────────────────────────────────────────────────────────┘
-```
-
-| Component | Directory | Core Technologies & Libraries |
-|---|---|---|
-| **Web Client** | `src/`, `public/` | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4, Recharts, Lucide icons |
-| **Machine Learning Backend** | `backend/` | FastAPI, Python 3.10, Scikit-learn 1.6.1, NumPy, SciPy, SHAP, Joblib |
-| **Cloud Database & Auth** | `supabase/` | PostgreSQL, Supabase RLS, JWT Auth, Migration schemas |
-| **Research & Auditing** | `research/` | Python, Matplotlib, Seaborn, StratifiedGroupKFold, SciPy Stats |
-| **Automated Testing** | `tests/`, `e2e/`, `backend/tests/` | Pytest (46 tests), Vitest (15 tests), Playwright (13 browser E2E tests) |
 
 ---
 
-## 🚀 Key Modules & Two-Layer Architecture
+## ✨ Core Features
 
-### 1. Layer 1 — Population Screening Reference Model
-* **12 Canonical Features**: Evaluates `ht_mean`, `ht_std`, `ft_mean`, `ft_std`, `ikl_mean`, `ikl_std`, `left_ht_mean`, `right_ht_mean`, `hand_asymmetry`, `pause_frequency`, `typing_speed`, and `session_consistency`.
-* **NeuroQWERTY Reference Anchor**: Trained and benchmarked against the lab-validated MIT NeuroQWERTY cohort ($N=116$, **ROC-AUC: 0.8213**, **Accuracy: 75.0%** vs 51.7% dummy baseline).
-* **Explainable AI (TreeSHAP)**: Automatically maps feature attributions into human-understandable clinical movement categories (*Speed & Hold*, *Rhythm Steadiness*, *Lateral Asymmetry*, and *Hesitations*).
+### 1. Two Complementary Screening Layers
+- **Layer 1 — Population Screening (Quick Check)**:
+  - 30-second assessment measuring 12 canonical kinematic features.
+  - Benchmarked against lab-validated reference distributions (ROC-AUC: 0.821).
+  - Immediate percentile feedback with SHAP movement explainability.
+  - Completely anonymous — no account or login required.
+- **Layer 2 — Personal Longitudinal Baseline**:
+  - Calibrates a frozen baseline after 10 daily sessions across 5+ calendar days on your physical keyboard.
+  - Employs Statistical Process Control (CUSUM, EWMA) to separate diurnal fatigue from genuine motor trend shifts.
+  - Protected with a personal 4-digit session PIN on shared computers.
 
-### 2. Layer 2 — Personal Longitudinal Motor-Pattern Monitoring
-* **Frozen Baseline Engine**: Establishes a personalized reference median and MAD interval after collecting 10+ qualifying sessions across 5+ distinct days on an anchor physical keyboard.
-* **Statistical Process Control (SPC)**: Deploys **CUSUM** and **EWMA** change-point detection to differentiate temporary diurnal fatigue from genuine, persistent motor degradation.
-* **Neuromotor Health Scorecard**: Real-time display of 4 Parkinson's digital biomarkers:
-  - **⏱️ Bradykinesia Index**: Hold duration & key release latency.
-  - **📈 Rhythm Steadiness**: Cadence coefficient of variation and fine-motor tremor fluctuations.
-  - **⚖️ Bilateral Symmetry**: Left-hand vs. right-hand hold duration delta (unilateral onset detection).
-  - **⏸️ Motor Hesitation**: Frequency of hesitations exceeding 500 ms (micro-freezes).
+### 2. Standardized Equal-Length Typing Engine
+- Calibrated bank of **8 distinct natural English prompts**, every single sentence calibrated to the **exact same length (170 characters)**.
+- Successive sessions automatically rotate prompts so repeated tests never show duplicate sentences while preserving identical cognitive load and motor kinematics.
 
-### 3. Treatment Timeline & Pre/Post Comparison
-* **Clinical Intervention Logging**: Optional, privacy-conscious logging of clinician-directed events (`medication_change`, `dosage_adjustment`, `therapy_start`).
-* **Objective Window Comparator**: Calculates pre- vs. post-event medians and percentage shifts (e.g., verifying a -10.4% reduction in hold time following Levodopa titration).
+### 3. Clinical Milestones & Event Correlator
+- Log significant life or medical events (medication adjustments, dosage changes, physical therapy start).
+- Real-time vertical milestone flags appear on the cadence timeline to correlate hold/flight changes with clinical interventions.
+- Exportable **Report View** summarizing baseline adherence, drift status, and cadence intervals.
 
-### 4. Clinician Longitudinal Summary Report
-* Exportable, printable neurology report with monitoring compliance statistics, anchor hardware verification, persistent drift indicators, and non-diagnostic research governance notices.
-
-### 5. Interactive Demo Mode for Evaluation & Viva
-* Built-in **"📊 Demo Profile"** toggle on the Layer 2 dashboard allowing evaluators to immediately preview a 12-session, 14-day clinical dataset with active medication timeline comparisons without requiring days of manual data entry.
+### 4. Absolute Privacy by Design
+- **Zero Raw Text Stored**: Characters and words are discarded immediately in transient memory. Only duration deltas ($t_{\text{up}} - t_{\text{down}}$) are computed.
+- **Decoupled Telemetry**: No key identities are stored or transmitted.
+- **Hardware Anchored**: Anchors to physical switch latency to prevent device discrepancies.
+- **Tracey the Mascot Companion**: Visual friendly mascot guiding participants across testing, calibration, and review phases.
 
 ---
 
-## 🏃 Local Development Quickstart
+## 🛠️ Tech Stack
 
-### 1. Backend Setup (FastAPI)
+| Tier | Technologies |
+|---|---|
+| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Recharts |
+| **Backend** | FastAPI (Python 3.10), Uvicorn, Scikit-learn 1.6.1, NumPy, SciPy, SHAP |
+| **Database & Auth** | Supabase PostgreSQL 15, Row-Level Security (RLS), JWT Claims |
+| **Testing** | Vitest (50 frontend tests), Pytest (54 backend tests) |
+
+---
+
+## 🚀 Getting Started
+
+### 1. Start the Backend (FastAPI)
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate       # Windows (or: source venv/bin/activate on Linux/macOS)
+# Windows:
+venv\Scripts\activate
+# macOS/Linux: source venv/bin/activate
+
 pip install -r requirements.txt
-pytest -q                   # 46 tests pass
-uvicorn app.main:app --port 8000 --reload
+python -m uvicorn app.main:app --port 8000 --reload
 ```
-*Health Check*: Navigate to `http://localhost:8000/api/v1/health` to confirm the Random Forest model and Layer 2 engine are loaded (`status: "ok"`).
+> Verify health at [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health) (reports `status: "ok"`).
 
-### 2. Frontend Setup (Next.js)
+### 2. Start the Frontend (Next.js)
 ```bash
-# In the repository root:
+# In the project root directory:
 npm install
-cp .env.example .env.local  # Populate with your Supabase URL, Anon Key, and API URL
-npm run dev                 # Starts Next.js on http://localhost:3000
+npm run dev
 ```
+> Open your browser at [http://localhost:3000](http://localhost:3000).
 
-### 3. Automated Verification Suites
+---
+
+## 🧪 Running Automated Tests
+
 ```bash
-npm test                    # Vitest unit test suite (15 passed)
-npm run typecheck           # TypeScript compilation (0 errors)
-npm run lint                # ESLint static analysis (0 errors)
-npx playwright test         # End-to-end browser integration suite
+# Frontend test suite (50 tests):
+npx vitest run
+
+# Backend test suite (54 tests):
+python -m pytest backend/tests
+
+# Production build verification:
+npm run build
 ```
 
-### 4. Model artifact & raw data (both gitignored — not in the clone)
-`*.joblib`, `functions/data/tappy_dataset/keystrokes/`, `functions/data/tappy_dataset/users/`,
-`functions/data/neuroqwerty_dataset/nq/`, and `*.zip` are ignored per `.gitignore:71-81`.
-After cloning you have NEITHER `model_full.joblib` NOR the raw keystroke files.
-- Raw data: download Tappy v1.0.0 (`Archived-Data.zip`, `Archived-users.zip`) from
-  https://physionet.org/content/tappy/1.0.0/ (ODC-By-1.0; cite Adams 2017, PLOS ONE
-  e0188226) and neuroQWERTY MIT-CSXPD v1.0.0 (`neuroQWERTY.zip`) from
-  https://physionet.org/content/nqmitcsxpd/1.0.0/ (ODC-By-1.0; cite Giancardo et al. 2016,
-  Sci Rep 34468) into the paths above, then run the harmonization + `research/clean_tappy_data.py`.
-- Retrain / restore the artifact: `python research/run_benchmark.py` regenerates
-  `functions/models/experiments/rf/model_full.joblib` + `live_scaler.json` (RF 200 trees,
-  depth 8, seed 42; pinned `scikit-learn==1.6.1` per `backend/requirements.txt:11`)
-  and copies them to `backend/app/artifacts/`. Without this step `/api/v1/health`
-  reports fail-closed `degraded` and Layer 1 inference stays disabled
-  (see `backend/app/services/layer1_screening.py:42-67`).
-
 ---
 
-## 🔒 Security, Privacy & Clinical Governance
-
-* **Zero Content Retention**: In accordance with HIPAA & GDPR research guidelines, **typed text content is immediately dropped from memory**. Only anonymized millisecond timestamps and hand coordinates are processed.
-* **Row-Level Security (RLS)**: Enforced via Supabase PostgreSQL policies (`auth.uid() = user_id`) across all tables.
-* **IDOR Protection**: All FastAPI endpoints verify cryptographic JWT subject claims (`sub == user_id`) to prevent cross-patient data access.
-* **TRIPOD+AI & WHO Compliance**: Output surfaces are guarded with transparent AI disclaimers, avoiding binary "Positive/Negative" claims in favor of categorical motor stability intervals.
-
----
-
-## 👥 Authors & Academic Context
-
-Developed as a Final Year Capstone Project in Biomedical Engineering / Computer Science.
-
-* **Project Version**: `2.1.0-clinical`  
-* **Release Branch**: `master` (synchronized with `main`)  
-* **Academic Evaluation License**: Shared exclusively for academic evaluation, clinical review, and demonstration.
+## 📋 Clinical Research Disclaimer
+*ParkinTrace is developed for research demonstration and academic evaluation. It provides objective digital biomarker measurements to support clinical discussions and motor trend observation. It does not replace formal neurological examination or provide autonomous medical diagnosis.*
