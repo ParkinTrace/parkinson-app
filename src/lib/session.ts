@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/config";
+import { clearPending, forgetLocalHistory, readPending } from "@/lib/localCache";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { SessionNotFoundError, type SessionPayload, type SessionRow } from "@/lib/types";
 
@@ -90,6 +91,37 @@ export async function persistAndAnalyze(
     if (error) throw new Error(`Metrics persist failed: ${error.message}`);
   }
   return { analysis: analysis as Record<string, unknown>, persisted };
+}
+
+export async function claimLocalSessions(): Promise<number> {
+  const pending = readPending();
+  if (!pending.length) return 0;
+
+  const supa = supabaseBrowser();
+  if (!supa) return 0;
+  const { data } = await supa.auth.getUser();
+  if (!data.user) return 0;
+
+  const claimed: string[] = [];
+  for (const payload of pending) {
+    try {
+      // Re-runs the canonical path with the same session id, so the row, the
+      // metrics and the Layer 1 result all land under this account exactly as
+      // if the session had been measured while signed in.
+      await persistAndAnalyze(payload);
+      claimed.push(payload.sessionId);
+    } catch {
+      // Best effort: stop and keep the rest pending for the next sign-in.
+      // A Layer 1 session must never block reaching the dashboard.
+      break;
+    }
+  }
+
+  if (claimed.length) {
+    clearPending(claimed);
+    forgetLocalHistory(claimed);
+  }
+  return claimed.length;
 }
 
 /** Exact retrieval (spec 16): the requested id or SessionNotFoundError.

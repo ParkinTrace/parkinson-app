@@ -8,10 +8,12 @@ import { PinSetupModal } from "@/components/PinSetupModal";
 import { useTypingCapture } from "@/hooks/useTypingCapture";
 import { extractTypingFeatures, withinSessionSeries } from "@/lib/features";
 import { newSessionId, persistAndAnalyze, stableDeviceId } from "@/lib/session";
-import { saveSnapshot, type Snapshot } from "@/lib/localCache";
+import { savePending, saveSnapshot, type Snapshot } from "@/lib/localCache";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { isApiConfigured } from "@/lib/config";
 import { fetchPinStatus, isSessionUnlocked, lockSession } from "@/lib/pinClient";
+import { pinRequired } from "@/lib/pinPolicy";
+import { useSession } from "@/lib/useSession";
 import type { SessionPayload } from "@/lib/types";
 
 const PROMPTS = [
@@ -56,6 +58,12 @@ export default function TypingTestPage() {
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
   const [pinVerified, setPinVerified] = useState(false);
 
+  /* The PIN protects a person's record. Layer 1 is the unsigned screener and
+     has no record to protect, so it never asks. The moment there is an
+     account — which means Layer 2 — every session is locked. */
+  const status = useSession();
+  const locked = pinRequired(status);
+
   const sessionIdRef = useRef<string>(newSessionId());
   const t0Ref = useRef<number>(0);
 
@@ -87,6 +95,11 @@ export default function TypingTestPage() {
   };
 
   const handleStartSessionClick = async () => {
+    // Layer 1 — no account, no PIN.
+    if (!locked) {
+      begin();
+      return;
+    }
     if (pinVerified) {
       begin();
       return;
@@ -168,6 +181,9 @@ export default function TypingTestPage() {
         features: {},
       };
       const { analysis, persisted } = await persistAndAnalyze(payload);
+      // No account: hold the payload so signing up afterwards can hand this
+      // session to the account instead of throwing it away.
+      if (!persisted) savePending(payload);
       const a = analysis as Record<string, Record<string, unknown>>;
       saveSnapshot({
         sessionId: sessionIdRef.current,
@@ -207,13 +223,15 @@ export default function TypingTestPage() {
         title="Typing session"
         description={`Type the prompt below at your normal pace. This is a real measured session — timing is recorded, the text is discarded. A valid session needs at least ${MIN_SECONDS} seconds and ${MIN_KEYS} keystrokes.`}
         actions={
-          <button
-            type="button"
-            onClick={() => setIsSetupModalOpen(true)}
-            className="rounded-md border border-hair px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
-          >
-            Change session PIN
-          </button>
+          locked ? (
+            <button
+              type="button"
+              onClick={() => setIsSetupModalOpen(true)}
+              className="rounded-md border border-hair px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
+            >
+              Change session PIN
+            </button>
+          ) : undefined
         }
       />
 
@@ -229,7 +247,9 @@ export default function TypingTestPage() {
           placeholder={
             active
               ? "Type here…"
-              : "Press Start session (a 4-digit PIN is required), then type here."
+              : locked
+                ? "Press Start session (your session PIN is required), then type here."
+                : "Press Start session, then type here."
           }
           className="mt-4 w-full rounded-md border border-hair bg-paper px-3 py-2.5 text-[15px] text-ink transition-colors placeholder:text-muted/70 focus:border-trace disabled:bg-canvas"
         />
@@ -237,7 +257,7 @@ export default function TypingTestPage() {
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {!active ? (
             <PrimaryButton onClick={handleStartSessionClick}>
-              {pinVerified ? "Start session" : "Unlock and start session"}
+              {!locked || pinVerified ? "Start session" : "Unlock and start session"}
             </PrimaryButton>
           ) : (
             <PrimaryButton onClick={finish} disabled={busy}>

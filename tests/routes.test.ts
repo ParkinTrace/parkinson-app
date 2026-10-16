@@ -2,32 +2,40 @@ import { describe, expect, it } from "vitest";
 import { isGatedPath, isPublicPath } from "../src/lib/routes";
 
 describe("isPublicPath", () => {
-  it("treats the landing, login and signup pages as public", () => {
+  it("treats the landing and the two auth pages as public", () => {
     expect(isPublicPath("/")).toBe(true);
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/signup")).toBe(true);
   });
 
-  it("treats every product page as private", () => {
+  it("treats Layer 1 as public — it needs no account", () => {
+    expect(isPublicPath("/consent")).toBe(true);
+    expect(isPublicPath("/layer1")).toBe(true);
+    expect(isPublicPath("/test")).toBe(true);
+    expect(isPublicPath("/session/3fa85f64-5717-4562-b3fc-2c963f66afa6")).toBe(true);
+  });
+
+  it("keeps Layer 2 and the account pages private", () => {
     for (const path of [
-      "/consent",
       "/demographics",
       "/layer",
       "/dashboard",
-      "/layer1",
       "/layer2",
-      "/test",
       "/motor-task",
       "/history",
-      "/session/abc123",
     ]) {
       expect(isPublicPath(path)).toBe(false);
     }
   });
 
-  it("does not treat nested paths as public", () => {
+  it("does not treat nested auth paths as public", () => {
     expect(isPublicPath("/login/help")).toBe(false);
     expect(isPublicPath("/signup/confirm")).toBe(false);
+  });
+
+  it("does not treat a lookalike session path as public", () => {
+    expect(isPublicPath("/session")).toBe(false);
+    expect(isPublicPath("/sessions")).toBe(false);
   });
 });
 

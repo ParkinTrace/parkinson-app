@@ -2,6 +2,7 @@
 import { use, useEffect, useState } from "react";
 import { Card, EmptyState, PageHeader, Readout, SecondaryButton, StatusBadge } from "@/components/ui";
 import { RhythmChart } from "@/components/charts";
+import { LayerOneComplete } from "@/components/LayerOneComplete";
 import { fetchSessionExact } from "@/lib/session";
 import { loadSnapshot, type Snapshot } from "@/lib/localCache";
 import { supabaseBrowser } from "@/lib/supabaseClient";
@@ -146,6 +147,10 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
       </Card>
 
       <RhythmChart series={snap.series} />
+
+      {/* An unsigned session is a Layer 1 session: this is where the mark
+          belongs, immediately after the typing that earned it. */}
+      {!snap.persisted && <LayerOneComplete />}
     </div>
   );
 }

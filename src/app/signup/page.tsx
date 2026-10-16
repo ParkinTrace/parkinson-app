@@ -5,6 +5,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Card, Field, PrimaryButton, inputCls } from "@/components/ui";
+import { hasLocalConsent } from "@/lib/localCache";
+import { claimLocalSessions } from "@/lib/session";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { isSupabaseConfigured } from "@/lib/config";
 import { useAppStore } from "@/store/useAppStore";
@@ -44,7 +46,10 @@ export default function SignupPage() {
       return;
     }
     setUserId(data.user?.id ?? null);
-    router.replace("/consent");
+    // Anything this browser measured before the account existed — the Layer 1
+    // session in particular — belongs to this account now.
+    await claimLocalSessions();
+    router.replace(hasLocalConsent() ? "/demographics" : "/consent");
   };
 
   return (

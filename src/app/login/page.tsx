@@ -5,6 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Card, Field, PrimaryButton, inputCls } from "@/components/ui";
+import { claimLocalSessions } from "@/lib/session";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { isSupabaseConfigured } from "@/lib/config";
 import { getOnboardingState } from "@/lib/onboarding";
@@ -36,6 +37,9 @@ export default function LoginPage() {
       return;
     }
     setUserId(data.user?.id ?? null);
+    // Hand this browser's unsigned sessions to the account being entered, so a
+    // Layer 1 measured before logging in counts from the first day.
+    await claimLocalSessions();
     const state = await getOnboardingState();
     router.replace(state === "complete" ? "/dashboard" : "/consent");
   };

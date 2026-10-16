@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, OnboardingShell, PrimaryButton } from "@/components/ui";
+import { hasLocalConsent } from "@/lib/localCache";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 
 const FACTS = [
@@ -28,12 +29,21 @@ export default function ConsentPage() {
   const [agreed, setAgreed] = useState(false);
   const [research, setResearch] = useState(false);
 
+  // Already accepted in this browser (for example on the way back from a
+  // Layer 1 session) — leave the box ticked rather than asking twice.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (hasLocalConsent()) setAgreed(true);
+  }, []);
+
   const next = async () => {
     const supa = supabaseBrowser();
+    let signedIn = false;
     if (supa) {
       try {
         const { data } = await supa.auth.getUser();
         if (data?.user) {
+          signedIn = true;
           await supa.from("profiles").upsert({ id: data.user.id, parkinson_context: { research_consent: research } });
         }
       } catch {
@@ -45,7 +55,10 @@ export default function ConsentPage() {
     } catch {
       /* private mode */
     }
-    router.push("/demographics");
+    // Signed in: an account already exists, so keep going with the account
+    // setup. Signed out: Layer 1 comes next, and the account is only needed
+    // when the personal baseline starts.
+    router.push(signedIn ? "/demographics" : "/layer1");
   };
 
   return (

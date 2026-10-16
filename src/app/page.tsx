@@ -78,11 +78,14 @@ export default function LandingPage() {
               Start here
             </h2>
             <p className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
-              Create an account, or continue where you left off.
+              Try Layer 1 now — no account needed. Or sign in and keep a baseline.
             </p>
 
             <div className="mt-4 flex flex-col gap-2">
-              <PrimaryButton onClick={() => router.push("/signup")}>Sign up</PrimaryButton>
+              <PrimaryButton onClick={() => router.push("/consent")}>
+                Give consent and try Layer 1
+              </PrimaryButton>
+              <SecondaryButton onClick={() => router.push("/signup")}>Sign up</SecondaryButton>
               <SecondaryButton onClick={() => router.push("/login")}>Log in</SecondaryButton>
             </div>
 

@@ -1,7 +1,7 @@
 # Anonymous Layer 1, account at the Layer 2 boundary
 
 **Date:** 2026-10-16
-**Status:** design approved, not implemented
+**Status:** implemented
 
 ## Problem
 
@@ -102,21 +102,38 @@ non-fatal: the payload stays pending and the next sign-in tries again.
 
 Nothing to build. Supabase already keeps the session in this browser until
 `auth.signOut()`, which lives on the dashboard. Coming back the next day lands
-on the account's own dashboard with no login, and this is worth an explicit e2e
-assertion because it is a stated requirement.
+on the account's own dashboard with no login.
 
-## PIN policy
+This is a stated requirement but it is not covered by the default e2e run: every
+run is signed out, and a hand-seeded `sb-<ref>-auth-token` does not survive,
+because supabase-js validates the session against the auth server on load and
+discards a token it cannot verify (measured — see Testing). It is covered by the
+cloud-gated specs when `PLAYWRIGHT_CLOUD` is set, against a real account.
 
-The 4-digit Session PIN exists to stop the next person at this browser from
-recording a session as you. Before there is an account there is no record to
-protect, so:
+## PIN policy — Layer 2 only
 
-- **signed out** — no PIN. `handleStartSessionClick` starts the session directly.
-- **signed in** — unchanged. PIN set up on the first session, verified before
-  every later one, `lockSession()` after each.
+The 4-digit PIN exists to stop the next person at this browser from recording a
+session **as you**. That only means something once a record exists, so the rule
+follows the layer, not the page:
 
-Decision recorded here because it changes the shape of the funnel: a first-time
-visitor must be able to go consent → type with nothing in between.
+- **Layer 1 (signed out, the screener)** — no PIN, ever. Consent → type, with
+  nothing in between.
+- **Layer 2 (signed in, the daily record)** — the PIN is set up on the first
+  session and verified before every later one, then `lockSession()` runs. Coming
+  back tomorrow means entering the PIN and continuing; that daily entry is the
+  point of the product.
+
+A session is one measurement read two ways, so a session started while signed in
+is a Layer 2 record even when it was opened from the Layer 1 page. It asks for
+the PIN. Deliberate: the PIN protects the record, and a signed-in user has one.
+
+Implementation: one predicate, `pinRequired(status, bypass)` in
+`src/lib/pinPolicy.ts`, returns `status === "signed-in" || bypass`. The `bypass`
+is `E2E_BYPASS_GUARD`, which the suite already uses to mean "pretend someone is
+signed in" — the same expression the header reads to decide whether to render app
+navigation. Layer 1 is the unsigned path, and the unsigned path never sees the
+PIN. Because the browser suite runs with the bypass on, the locked path stays
+covered instead of silently dropping out of the suite.
 
 ## The finish mark
 
@@ -128,8 +145,10 @@ this browser or this account (`fetchHistory()` returns a row with `valid` and no
 > Layer 2 compares you against your own baseline instead, which has to follow you
 > across days and devices — that needs an account.
 
-with a **Continue to Layer 2** primary button → `/signup`, and a secondary
-"Already have an account — log in" → `/login`.
+with a **Continue to Layer 2 — create an account** primary button → `/signup`,
+and a secondary "I already have an account" → `/login`. A signed-in visitor gets
+**Continue to Layer 2** → `/dashboard` instead: the account already exists, so
+there is nothing left to create.
 
 The block appears in two places: under the readout on `/session/<id>` right after
 the session that completed Layer 1, and permanently on `/layer1`. It is never
@@ -141,6 +160,26 @@ The right-hand panel keeps Sign up / Log in. A primary "Give consent and try
 Layer 1" button is added above them, pointing at `/consent`. The existing
 auto-redirect stays: signed in and complete → `/dashboard`; signed in and
 incomplete → `/consent`; signed out → stay on the landing.
+
+## Hard refresh
+
+A refresh is where the two visitors have to be told apart, and they are:
+
+- **Signed out, on `/`** — `getOnboardingState()` reads `anonymous`, so the
+  landing stays put and the whole funnel is offered again, from consent.
+- **Signed out, on a route that already has history** (`/layer1`, `/session/<id>`)
+  — those pages are public, so a refresh re-renders the reading from this
+  browser's local history instead of throwing the visitor back to the landing.
+  The measurement they just made is not lost by pressing F5.
+- **Signed in** — the session is Supabase's own cookie, so a refresh on `/` goes
+  straight to `/dashboard`, and no daily login is asked for. Nothing is
+  re-consented and no Layer 1 step is repeated.
+
+The one thing a refresh does drop is the *interpretation* of an unsigned session
+once the snapshot is gone: the numbers survive in local history, the population
+comparison does not. That is a deliberate limit of holding data in a browser, and
+it is the reason the completion block says the account is what carries Layer 2
+across days and devices.
 
 ## Edge cases
 
@@ -165,10 +204,28 @@ incomplete → `/consent`; signed out → stay on the landing.
   session insight → the completion block is visible → Continue leaves for
   `/signup`. Update `e2e/session.spec.ts`, whose onboarding walk currently starts
   at sign up, to the new order.
-- **PIN coverage** — every e2e run is signed out, so with this change nothing
-  drives the PIN modal. Mitigate by seeding a synthetic signed-in session
-  (`sb-<ref>-auth-token` with a far-future expiry) in one spec so the PIN path
-  stays covered, and keep `tests/pin.test.ts` as the unit-level check.
+- **PIN coverage** — every default e2e run is signed out, so without help nothing
+  would drive the PIN modal. `pinRequired` takes the bypass as an argument and
+  the component passes `E2E_BYPASS_GUARD`, so the suite's `/test` run still
+  exercises the real setup/verify flow while an unsigned visitor in production
+  never sees it. The rule itself is unit-tested in `tests/pinPolicy.test.ts`.
+
+  Seeding a synthetic `sb-<ref>-auth-token` cookie was tried and does not work:
+  the cookie lands (verified in the page) but supabase-js validates the session
+  against the auth server during initialisation and clears a token it cannot
+  verify, so the app correctly stays signed out. Do not reintroduce it.
+
+## Verified
+
+- `npx tsc --noEmit` — clean.
+- `npx playwright test` — 18 passed, 4 skipped (the cloud-gated specs), 0 failed.
+- `npm test` — 43 passed. `tests/pin.test.ts` can exceed vitest's 5s default when
+  the local backend is cold; it passes with a longer timeout and is unrelated to
+  this change.
+- The whole funnel was driven once by hand in a real browser against the local
+  backend: landing → consent → Layer 1 → typing → `/session/<id>` → the
+  completion mark → `/signup`, with the header showing Log in / Sign up and no
+  PIN at any point.
 
 ## Risks
 

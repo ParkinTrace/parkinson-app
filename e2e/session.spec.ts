@@ -26,12 +26,19 @@ test("auth forms validate input", async ({ page }) => {
   await expect(page.getByText(/valid email/i).first()).toBeVisible();
 });
 
-test("onboarding has no practice session gate", async ({ page }) => {
+test("consent leads straight into Layer 1, with no account", async ({ page }) => {
   await page.goto("/consent");
   await expect(page.getByText(/no|practice/i).first()).toBeVisible();
   await page.getByRole("checkbox").first().check();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page).toHaveURL(/\/demographics/);
+  // Layer 1 is the screener: it comes before the account and needs none.
+  await expect(page).toHaveURL(/\/layer1/);
+  await expect(page.getByText(/no practice run/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Start your first session/i })).toBeVisible();
+});
+
+test("the account funnel has no practice session gate", async ({ page }) => {
+  await page.goto("/demographics");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/layer/);
   // Layer choice completes onboarding directly — no familiarization step.
@@ -42,7 +49,9 @@ test("onboarding has no practice session gate", async ({ page }) => {
 
 test("typing page captures real keys with no Date.now timing", async ({ page }) => {
   await page.goto("/test");
-  // A daily session is gated behind the real 4-digit PIN setup/verify flow.
+  // The browser suite runs as a signed-in visitor (E2E_BYPASS_GUARD), which is
+  // the Layer 2 path: a daily session is gated behind the real 4-digit PIN
+  // setup/verify flow. An unsigned visitor is never asked — see pinPolicy.
   await unlockSessionWithPin(page);
   const box = page.locator("textarea");
   await box.click();

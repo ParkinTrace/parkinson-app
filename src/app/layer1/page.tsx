@@ -1,42 +1,73 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Card, EmptyState, PageHeader, PrimaryButton, StatusBadge } from "@/components/ui";
+import { LayerOneComplete } from "@/components/LayerOneComplete";
 import { FeatureComparisonChart } from "@/components/charts";
 import { loadSnapshot, lastSessionId } from "@/lib/localCache";
+import { fetchHistory } from "@/lib/session";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 
-/** Layer 1 insight: real extracted metrics, categorical interpretation,
- *  contributors when present. The internal model signal (pdProbability)
- *  is NEVER rendered as a clinical probability. */
+/** Layer 1: the population-reference screener. Public — it is the first thing
+ *  a visitor does, before any account exists. The internal model signal
+ *  (pdProbability) is NEVER rendered as a clinical probability. */
+const MEASURED = [
+  ["Hold time", "How long each key is held down."],
+  ["Flight time", "The gap between releasing one key and pressing the next."],
+  ["Inter-key latency", "Press to press, the intervals you actually produce."],
+  ["Hand symmetry", "Whether one hand runs behind the other."],
+];
+
 export default function Layer1Page() {
   const [state, setState] = useState<{
     features: Record<string, number | null>;
     layer1: Record<string, unknown> | null;
-    shap: string;
+    sessionCount: number;
   } | null>(null);
 
   useEffect(() => {
     const run = async () => {
+      const history = await fetchHistory();
+      const sessionCount = history.filter((s) => s.valid !== false).length;
+
+      // Account: the stored metrics for this account's latest session.
       const supa = supabaseBrowser();
       if (supa) {
         const { data: auth } = await supa.auth.getUser();
         if (auth.user) {
           const { data } = await supa
-            .from("session_metrics").select("*").eq("user_id", auth.user.id)
-            .order("created_at", { ascending: false }).limit(1).maybeSingle();
+            .from("session_metrics")
+            .select("*")
+            .eq("user_id", auth.user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
           if (data) {
-            setState({ features: data.features ?? {}, layer1: data.layer1_result, shap: "stored" });
+            setState({
+              features: data.features ?? {},
+              layer1: data.layer1_result,
+              sessionCount,
+            });
             return;
           }
         }
       }
+
+      // No account: the session measured in this browser. The snapshot holds
+      // the full reading while the tab lives; the history row keeps the values
+      // after that, so the numbers survive even when the interpretation does
+      // not.
       const id = lastSessionId();
       const snap = id ? loadSnapshot(id) : null;
-      setState(
-        snap
-          ? { features: snap.features, layer1: snap.layer1, shap: "snapshot" }
-          : { features: {}, layer1: null, shap: "none" },
-      );
+      if (snap) {
+        setState({ features: snap.features, layer1: snap.layer1, sessionCount });
+        return;
+      }
+      const last = history[history.length - 1];
+      setState({
+        features: (last?.features as Record<string, number | null>) ?? {},
+        layer1: null,
+        sessionCount,
+      });
     };
     run();
   }, []);
@@ -50,20 +81,38 @@ export default function Layer1Page() {
     );
   }
 
-  if (!state.layer1 && Object.keys(state.features).length === 0) {
+  // Nothing measured yet: this is the page a first-time visitor lands on, so
+  // it has to explain the measurement and offer the session, not apologise.
+  if (state.sessionCount === 0) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader
           eyebrow="Layer 01"
           title="Layer 1 — Typing-pattern screening"
-          description="How your key-timing sits against a research population. Read once per session."
+          description="One typed passage, read against the timing ranges of a research cohort. No account needed, and nothing about the words you type is kept."
         />
-        <EmptyState
-          title="No measurement to read yet"
-          body="Complete one typing session and this view fills with your real timing values and how they compare. The first session is a real measurement — there is no practice run."
-        />
+
+        <Card>
+          <h2 className="label border-b border-hair pb-3">What this measures</h2>
+          <dl className="mt-1">
+            {MEASURED.map(([name, line]) => (
+              <div
+                key={name}
+                className="flex flex-col gap-1 border-b border-hair py-3 last:border-b-0 sm:flex-row sm:items-baseline sm:gap-6"
+              >
+                <dt className="font-mono text-xs font-medium text-ink sm:w-44 sm:shrink-0">{name}</dt>
+                <dd className="text-sm leading-relaxed text-ink-soft">{line}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs leading-relaxed text-muted">
+            Thirty seconds of typing is enough. This is a real measurement — there is no practice
+            run, and the text you type is discarded the moment the timing is taken.
+          </p>
+        </Card>
+
         <div>
-          <PrimaryButton href="/test">Start a typing session</PrimaryButton>
+          <PrimaryButton href="/test">Start your first session</PrimaryButton>
         </div>
       </div>
     );
@@ -89,7 +138,7 @@ export default function Layer1Page() {
           <p className="text-sm leading-relaxed text-ink-soft">
             {String(
               l1["message"] ??
-                "On-device preview — connect the analysis service for the population comparison.",
+                "Values from the last session measured in this browser. The population comparison itself is not held here after a reload.",
             )}
           </p>
         </div>
@@ -143,6 +192,8 @@ export default function Layer1Page() {
           </p>
         </Card>
       )}
+
+      <LayerOneComplete />
     </div>
   );
 }
