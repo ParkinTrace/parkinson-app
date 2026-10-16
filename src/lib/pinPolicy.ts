@@ -1,4 +1,3 @@
-import { E2E_BYPASS_GUARD } from "@/lib/config";
 import type { SessionStatus } from "@/lib/useSession";
 
 /**
@@ -9,13 +8,12 @@ import type { SessionStatus } from "@/lib/useSession";
  * every measurement is written down and locked — that is the daily entry the
  * PIN exists for.
  *
- * `E2E_BYPASS_GUARD` is the browser suite saying "pretend someone is signed in",
- * which is exactly how the app header already reads it. That keeps the locked
- * path covered by the suite instead of silently dropping it.
+ * This briefly also answered true under `E2E_BYPASS_GUARD`, because the browser
+ * suite could not create a signed-in session and the PIN flow would otherwise
+ * have gone untested. `e2e/helpers/session.ts` can seed a real session cookie,
+ * so the product rule is only the rule again, and the suite tests the real
+ * thing instead of a flag that only exists for tests.
  */
-export function pinRequired(
-  status: SessionStatus,
-  bypass: boolean = E2E_BYPASS_GUARD,
-): boolean {
-  return status === "signed-in" || bypass;
+export function pinRequired(status: SessionStatus): boolean {
+  return status === "signed-in";
 }

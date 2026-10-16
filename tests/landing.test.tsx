@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 /**
  * The front door stays put. It used to replace itself with /dashboard or
@@ -11,6 +11,9 @@ const h = vi.hoisted(() => ({
   push: vi.fn(),
   replace: vi.fn(),
   state: "anonymous" as "anonymous" | "incomplete" | "complete",
+  email: null as string | null,
+  signOut: vi.fn(),
+  lockSession: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -23,6 +26,18 @@ vi.mock("@/lib/onboarding", () => ({
   getOnboardingState: () => Promise.resolve(h.state),
 }));
 
+vi.mock("@/lib/pinClient", () => ({ lockSession: h.lockSession }));
+
+vi.mock("@/lib/supabaseClient", () => ({
+  supabaseBrowser: () => ({
+    auth: {
+      getSession: () =>
+        Promise.resolve({ data: { session: h.email ? { user: { email: h.email } } : null } }),
+      signOut: h.signOut,
+    },
+  }),
+}));
+
 import LandingPage from "../src/app/page";
 
 afterEach(cleanup);
@@ -31,7 +46,11 @@ describe("landing page", () => {
   beforeEach(() => {
     h.push.mockReset();
     h.replace.mockReset();
+    h.signOut.mockReset();
+    h.lockSession.mockReset();
+    h.signOut.mockResolvedValue({ error: null });
     h.state = "anonymous";
+    h.email = null;
   });
 
   it("offers the unsigned Layer 1 and never redirects", async () => {
@@ -75,5 +94,46 @@ describe("landing page", () => {
     // page does on their behalf.
     expect(h.push).not.toHaveBeenCalled();
     expect(h.replace).not.toHaveBeenCalled();
+  });
+
+  it("names the account that is signed in", async () => {
+    h.state = "complete";
+    h.email = "someone@example.test";
+    render(<LandingPage />);
+
+    expect(await screen.findByText(/someone@example\.test/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Log out" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Sign in with another account/i })).toBeTruthy();
+  });
+
+  it("logs out from the landing and drops back to the signed-out panel", async () => {
+    h.state = "complete";
+    h.email = "someone@example.test";
+    render(<LandingPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Log out" }));
+
+    await waitFor(() => expect(h.signOut).toHaveBeenCalled());
+    // The PIN unlock must not survive a logout — it is the thing standing
+    // between the next person at this browser and a recorded session.
+    await waitFor(() => expect(h.lockSession).toHaveBeenCalled());
+    expect(
+      await screen.findByRole("button", { name: /Give consent and try Layer 1/i }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Log out" })).toBeNull();
+    // Logging out leaves you where you are, on the landing.
+    expect(h.push).not.toHaveBeenCalled();
+  });
+
+  it("switches account by signing out and going to the login page", async () => {
+    h.state = "complete";
+    h.email = "someone@example.test";
+    render(<LandingPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Sign in with another account/i }));
+
+    await waitFor(() => expect(h.signOut).toHaveBeenCalled());
+    await waitFor(() => expect(h.push).toHaveBeenCalledWith("/login"));
+    expect(h.lockSession).toHaveBeenCalled();
   });
 });

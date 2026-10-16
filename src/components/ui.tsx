@@ -67,14 +67,16 @@ export function SecondaryButton({
   children,
   onClick,
   href,
+  disabled = false,
   className = "",
 }: {
   children: ReactNode;
   onClick?: () => void;
   href?: string;
+  disabled?: boolean;
   className?: string;
 }) {
-  const cls = `inline-block rounded-md border border-hair bg-paper px-5 py-2.5 text-center text-sm font-semibold tracking-tight text-ink transition-colors hover:border-ink/30 hover:bg-canvas ${className}`;
+  const cls = `inline-block rounded-md border border-hair bg-paper px-5 py-2.5 text-center text-sm font-semibold tracking-tight text-ink transition-colors hover:border-ink/30 hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-45 ${className}`;
   if (href)
     return (
       <a href={href} className={cls}>
@@ -82,7 +84,7 @@ export function SecondaryButton({
       </a>
     );
   return (
-    <button type="button" onClick={onClick} className={cls}>
+    <button type="button" disabled={disabled} onClick={onClick} className={cls}>
       {children}
     </button>
   );

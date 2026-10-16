@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { unlockSessionWithPin } from "./helpers/pin";
 
 /**
  * Browser regression suite (spec Phase 9). Cloud-dependent flows
  * (Supabase Auth round-trip, FastAPI analysis, RLS isolation) run only
  * when a backend is configured; everything else runs against `next dev`
  * with zero credentials. Nothing here fabricates a session or a result.
+ * The signed-in half of the app lives in signed-in.spec.ts.
  */
 const HAS_CLOUD = !!process.env.PLAYWRIGHT_CLOUD;
 
@@ -49,11 +49,10 @@ test("the account funnel has no practice session gate", async ({ page }) => {
 
 test("typing page captures real keys with no Date.now timing", async ({ page }) => {
   await page.goto("/test");
-  // The browser suite runs as a signed-in visitor (E2E_BYPASS_GUARD), which is
-  // the Layer 2 path: a daily session is gated behind the real 4-digit PIN
-  // setup/verify flow. An unsigned visitor is never asked — see pinPolicy.
-  await unlockSessionWithPin(page);
+  // Signed out this is Layer 1: no account, so no PIN and no gate in the way.
+  await page.getByRole("button", { name: /Start session/i }).click();
   const box = page.locator("textarea");
+  await expect(box).toBeEnabled({ timeout: 20_000 });
   await box.click();
   await page.keyboard.type("the quick brown fox jumps over", { delay: 60 });
   const counter = page.getByText(/keys ·/);

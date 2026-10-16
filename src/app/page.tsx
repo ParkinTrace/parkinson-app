@@ -5,6 +5,9 @@ import { Card, PrimaryButton, SecondaryButton } from "@/components/ui";
 import { Trace } from "@/components/Trace";
 import { isSupabaseConfigured } from "@/lib/config";
 import { getOnboardingState, type OnboardingState } from "@/lib/onboarding";
+import { lockSession } from "@/lib/pinClient";
+import { supabaseBrowser } from "@/lib/supabaseClient";
+import { useAppStore } from "@/store/useAppStore";
 
 /* Layer 1 and Layer 2 are a genuine progression — population reference
    first, then your own baseline — so numbering them encodes something
@@ -40,6 +43,9 @@ export default function LandingPage() {
      which account was open. The account state now only changes what the
      "Start here" panel offers. */
   const [account, setAccount] = useState<OnboardingState>("anonymous");
+  const [email, setEmail] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  const resetSession = useAppStore((s) => s.resetSession);
 
   useEffect(() => {
     let active = true;
@@ -51,12 +57,43 @@ export default function LandingPage() {
       .catch(() => {
         /* the signed-out panel is the safe default */
       });
+    // Which account is open, so that "sign in with another account" is a real
+    // choice rather than a guess about who is signed in.
+    supabaseBrowser()
+      ?.auth.getSession()
+      .then(({ data }) => {
+        if (active) setEmail(data.session?.user?.email ?? null);
+      })
+      .catch(() => {
+        /* no address to show; the panel still works */
+      });
     return () => {
       active = false;
     };
   }, []);
 
   const signedIn = account !== "anonymous";
+  const accountLine = email ? `Signed in as ${email}.` : "You are signed in.";
+
+  /* Leaving is as deliberate as arriving: the session cookie goes, the PIN
+     unlock goes with it (it is what stops the next person recording as you),
+     and the panel drops back to the signed-out state instead of waiting for a
+     reload. `then` is the switch-account case. */
+  const signOut = async (then?: string) => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await supabaseBrowser()?.auth.signOut();
+    } catch {
+      /* the local reset below is what the visitor sees */
+    }
+    lockSession();
+    resetSession();
+    setAccount("anonymous");
+    setEmail(null);
+    setSigningOut(false);
+    if (then) router.push(then);
+  };
 
   return (
     <div className="flex flex-col">
@@ -89,9 +126,9 @@ export default function LandingPage() {
             </h2>
             <p className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
               {account === "complete"
-                ? "You are signed in — your baseline is on the dashboard."
+                ? `${accountLine} Your baseline is on the dashboard.`
                 : signedIn
-                  ? "You are signed in. Your setup is not finished."
+                  ? `${accountLine} Your setup is not finished.`
                   : "Try Layer 1 now — no account needed. Or sign in and keep a baseline."}
             </p>
 
@@ -119,6 +156,24 @@ export default function LandingPage() {
                 </>
               )}
             </div>
+
+            {/* A shared browser is the reason the PIN exists at all, so getting
+                out of the account has to be as easy as getting in. */}
+            {signedIn && (
+              <div className="mt-4 flex flex-col gap-2 border-t border-hair pt-4">
+                <SecondaryButton onClick={() => signOut()} disabled={signingOut}>
+                  Log out
+                </SecondaryButton>
+                <button
+                  type="button"
+                  onClick={() => signOut("/login")}
+                  disabled={signingOut}
+                  className="self-start text-xs font-semibold tracking-tight text-muted underline-offset-4 transition-colors hover:text-ink hover:underline disabled:opacity-45"
+                >
+                  Sign in with another account
+                </button>
+              </div>
+            )}
 
             {!isSupabaseConfigured && (
               <p className="mt-3 text-xs text-[#8a5a06]">

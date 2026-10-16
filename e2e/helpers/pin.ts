@@ -30,10 +30,14 @@ const VERIFY_HEADING = "Session Access PIN";
  * "Save PIN & Continue" stays disabled forever. Typing lets the component's
  * own auto-advance drive, which is exactly how a person uses it.
  */
-export async function unlockSessionWithPin(page: Page): Promise<void> {
+export async function unlockSessionWithPin(
+  page: Page,
+  { started = false }: { started?: boolean } = {},
+): Promise<void> {
   // Button reads "🔒 Unlock & Start session" when locked and "Start session"
-  // once unlocked; the substring match covers both.
-  await page.getByRole("button", { name: /Start session/i }).click();
+  // once unlocked; the substring match covers both. Skipped when the caller has
+  // already pressed it and asserted the gate itself.
+  if (!started) await page.getByRole("button", { name: /Start session/i }).click();
 
   const setupHeading = page.getByRole("heading", { name: SETUP_HEADING });
   const verifyHeading = page.getByRole("heading", { name: VERIFY_HEADING });

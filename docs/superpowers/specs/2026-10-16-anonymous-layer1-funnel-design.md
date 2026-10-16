@@ -104,11 +104,11 @@ Nothing to build. Supabase already keeps the session in this browser until
 `auth.signOut()`, which lives on the dashboard. Coming back the next day lands
 on the account's own dashboard with no login.
 
-This is a stated requirement but it is not covered by the default e2e run: every
-run is signed out, and a hand-seeded `sb-<ref>-auth-token` does not survive,
-because supabase-js validates the session against the auth server on load and
-discards a token it cannot verify (measured — see Testing). It is covered by the
-cloud-gated specs when `PLAYWRIGHT_CLOUD` is set, against a real account.
+Covered by `e2e/signed-in.spec.ts`: arriving with a session, `/dashboard` renders
+instead of bouncing to `/login`, which is what the requirement is about.
+Whether Supabase's own cookie survives a browser restart is Supabase's promise;
+the cloud-gated specs cover that against a real account when `PLAYWRIGHT_CLOUD`
+is set.
 
 ## PIN policy — Layer 2 only
 
@@ -217,28 +217,42 @@ across days and devices.
   session insight → the completion block is visible → Continue leaves for
   `/signup`. Update `e2e/session.spec.ts`, whose onboarding walk currently starts
   at sign up, to the new order.
-- **PIN coverage** — every default e2e run is signed out, so without help nothing
-  would drive the PIN modal. `pinRequired` takes the bypass as an argument and
-  the component passes `E2E_BYPASS_GUARD`, so the suite's `/test` run still
-  exercises the real setup/verify flow while an unsigned visitor in production
-  never sees it. The rule itself is unit-tested in `tests/pinPolicy.test.ts`.
+- **Signed-in coverage** — every other e2e run is signed out, so the account
+  panel on the landing page and the PIN gate on a personal session would never
+  be exercised in a browser. `e2e/helpers/session.ts` seeds the real session
+  cookie, and `e2e/signed-in.spec.ts` drives them for real: the panel names the
+  account and offers log out / switch account, logging out returns to the
+  signed-out panel without leaving the page, switching account lands on
+  `/login`, `/dashboard` renders without asking for a login, and `/test` runs
+  the actual PIN setup/verify flow.
 
-  Seeding a synthetic `sb-<ref>-auth-token` cookie was tried and does not work:
-  the cookie lands (verified in the page) but supabase-js validates the session
-  against the auth server during initialisation and clears a token it cannot
-  verify, so the app correctly stays signed out. Do not reintroduce it.
+  The cookie value must be `"base64-" + base64url(JSON.stringify(session))`.
+  That is what `@supabase/ssr` 0.12.7 writes (`dist/main/cookies.js`:
+  `BASE64_PREFIX + stringToBase64URL(value)`), and a value without the prefix is
+  silently discarded — the app looks signed out with no error. An earlier
+  attempt omitted the prefix and concluded, wrongly, that supabase-js rejects
+  seeded sessions. It does not.
+- **PIN rule** — `pinRequired()` is `status === "signed-in"` and nothing else.
+  It briefly also honoured `E2E_BYPASS_GUARD`, because the suite had no way to
+  be signed in and the PIN flow would otherwise have gone untested. Seeding
+  removed that need, so the product rule contains no test flag.
+  `tests/pinPolicy.test.ts` covers it.
 
 ## Verified
 
 - `npx tsc --noEmit` — clean.
-- `npx playwright test` — 18 passed, 4 skipped (the cloud-gated specs), 0 failed.
-- `npm test` — 43 passed. `tests/pin.test.ts` can exceed vitest's 5s default when
+- `npx playwright test` — 23 passed, 4 skipped (the cloud-gated specs), 0 failed.
+- `npm test` — 50 passed. `tests/pin.test.ts` can exceed vitest's 5s default when
   the local backend is cold; it passes with a longer timeout and is unrelated to
   this change.
 - The whole funnel was driven once by hand in a real browser against the local
   backend: landing → consent → Layer 1 → typing → `/session/<id>` → the
   completion mark → `/signup`, with the header showing Log in / Sign up and no
   PIN at any point.
+- The signed-in landing panel was driven the same way with a seeded session:
+  it names the account, and logging out returns the panel to the signed-out
+  state without leaving `/` (the logout call 403s against the real project, and
+  the local reset is what the visitor sees).
 
 ## Risks
 
