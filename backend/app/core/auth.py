@@ -49,21 +49,49 @@ def verify_user_authorization(
     required: bool | None = None,
 ) -> str:
     """Verify that caller is authorized to access requested_user_id.
-    
+
     Rules:
-    - If authorization header is provided:
-      - Validates JWT payload format
-      - Checks expiration timestamp (exp)
-      - Verifies that token 'sub' matches requested_user_id exactly (prevents IDOR).
-    - If authorization header is missing:
-      - If required (or in prod / when SUPABASE_URL is configured), raises 401.
-      - In local offline dev without credentials, allows fallback to requested_user_id.
-    
+    - No authorization header: enforced if `required` is set (or in prod / when
+      SUPABASE_URL is configured); otherwise the caller falls back to the
+      requested user_id, which is what offline development and the PIN
+      endpoints rely on.
+    - Usable Bearer token: the payload is decoded, `exp` is checked, and `sub`
+      must equal requested_user_id exactly (this is the IDOR guard).
+    - Unusable Bearer token on an endpoint that declared auth optional
+      (`required=False`): treated as no token at all. A caller who was entitled
+      to send no credentials must not be failed for sending a stale one.
+
     Returns the verified user_id.
     """
     is_prod = os.environ.get("APP_ENV") == "prod"
     has_supabase = bool(os.environ.get("SUPABASE_URL"))
     auth_enforced = required if required is not None else (is_prod or has_supabase)
+
+    # An endpoint that explicitly declares auth optional (the PIN pair, which
+    # has to work for a visitor who has no account yet) accepts a request with
+    # no credentials at all. Whether auth is *enforced* elsewhere is a separate,
+    # environment-derived question and is deliberately not reused here.
+    auth_optional = required is False
+
+    def reject(status_code: int, detail: str) -> str:
+        """Fail with the given status — unless this endpoint declared auth optional.
+
+        A browser attaches whatever access token it happens to hold, and an
+        expired one is the normal state of a tab left open past its refresh.
+        On an optional-auth endpoint that stale token used to fail the whole
+        request, so a correct PIN came back as a 401 and the session stayed
+        locked. There, an unusable token must degrade to "no token" — the
+        caller was free to send none.
+        """
+        if not auth_optional:
+            raise HTTPException(status_code=status_code, detail=detail)
+        if not requested_user_id:
+            raise HTTPException(status_code=400, detail="User ID is required")
+        logger.info(
+            "Ignoring unusable credentials on an endpoint that does not require auth: %s",
+            detail,
+        )
+        return requested_user_id
 
     if not authorization:
         if auth_enforced:
@@ -74,25 +102,25 @@ def verify_user_authorization(
 
     # Authorization header present: must be Bearer token
     if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid authorization scheme; Bearer token required")
+        return reject(401, "Invalid authorization scheme; Bearer token required")
 
     token = authorization.split("Bearer ", 1)[1].strip()
     claims = decode_jwt_payload(token)
     if claims is None:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+        return reject(401, "Invalid token payload")
 
     # Check expiration if present
     exp = claims.get("exp")
     if exp is not None:
         try:
             if float(exp) < time.time():
-                raise HTTPException(status_code=401, detail="Token has expired")
+                return reject(401, "Token has expired")
         except (ValueError, TypeError):
-            raise HTTPException(status_code=401, detail="Invalid token expiration claim")
+            return reject(401, "Invalid token expiration claim")
 
     token_sub = claims.get("sub")
     if not token_sub:
-        raise HTTPException(status_code=401, detail="Token missing subject claim ('sub')")
+        return reject(401, "Token missing subject claim ('sub')")
 
     # If requested_user_id was passed, it MUST match token_sub exactly
     if requested_user_id and str(requested_user_id) != str(token_sub):
@@ -101,9 +129,6 @@ def verify_user_authorization(
             token_sub,
             requested_user_id,
         )
-        raise HTTPException(
-            status_code=403,
-            detail="Forbidden: access denied for the requested user_id",
-        )
+        return reject(403, "Forbidden: access denied for the requested user_id")
 
     return str(token_sub)

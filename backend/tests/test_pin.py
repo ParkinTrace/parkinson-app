@@ -1,5 +1,10 @@
 """Unit tests for 4-digit daily session PIN security."""
 
+import base64
+import json
+import time
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -135,3 +140,48 @@ def test_pin_api_verification_and_token():
     val_res = client.get(f"/api/v1/auth/pin/validate-token?token={token}&user_id={user_id}")
     assert val_res.status_code == 200
     assert val_res.json()["valid"] is True
+
+
+def _make_jwt(sub: str, exp: float) -> str:
+    header = {"alg": "HS256", "typ": "JWT"}
+    payload = {"sub": sub, "role": "authenticated", "aud": "authenticated", "exp": exp}
+    h_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
+    p_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    return f"{h_b64}.{p_b64}.dummy_signature_for_test"
+
+
+def test_pin_api_tolerates_an_unusable_token():
+    """A stale token must not fail an endpoint that never required one.
+
+    The PIN pair is optional-auth: it has to work for a visitor with no account
+    yet. A browser attaches whatever access token it holds, and an expired one
+    is the normal state of a tab left open past its refresh. Failing the request
+    there turned a correct PIN into a 401 and left the session locked.
+    """
+    user_id = str(uuid4())
+    client.post(
+        "/api/v1/auth/pin/setup",
+        json={"pin": "2468", "confirm_pin": "2468", "user_id": user_id},
+    )
+
+    tokens = {
+        "expired": _make_jwt(user_id, time.time() - 60),
+        "another user's": _make_jwt(str(uuid4()), time.time() + 3600),
+        "malformed": "not-a-jwt",
+    }
+    for label, token in tokens.items():
+        res = client.post(
+            "/api/v1/auth/pin/verify",
+            json={"pin": "2468", "user_id": user_id},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200, f"a {label} token must not fail an optional-auth call"
+        assert res.json()["verified"] is True
+
+    # The PIN itself is still checked, so tolerating a token is not tolerating a wrong PIN.
+    wrong = client.post(
+        "/api/v1/auth/pin/verify",
+        json={"pin": "1357", "user_id": user_id},
+        headers={"Authorization": f"Bearer {_make_jwt(user_id, time.time() + 3600)}"},
+    )
+    assert wrong.status_code == 401
