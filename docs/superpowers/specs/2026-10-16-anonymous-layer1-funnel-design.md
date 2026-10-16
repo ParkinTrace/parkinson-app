@@ -157,9 +157,21 @@ shown when the history is empty.
 ## Landing
 
 The right-hand panel keeps Sign up / Log in. A primary "Give consent and try
-Layer 1" button is added above them, pointing at `/consent`. The existing
-auto-redirect stays: signed in and complete → `/dashboard`; signed in and
-incomplete → `/consent`; signed out → stay on the landing.
+Layer 1" button is added above them, pointing at `/consent`.
+
+**The landing does not redirect.** It used to replace itself with `/dashboard` or
+`/consent` as soon as a session existed, which made the front door impossible to
+read while signed in and never said which account was open. `/` now always stays;
+the account state only changes the panel:
+
+- signed out — "Give consent and try Layer 1" → `/consent`, plus Sign up / Log in
+  and the sign-up walkthrough;
+- signed in, onboarding unfinished — "Resume setup" → `/consent`;
+- signed in, onboarding finished — "Go to dashboard" → `/dashboard` and
+  "New typing session" → `/test`.
+
+The walkthrough list is hidden once there is an account, because it is advice for
+someone who has not signed up yet.
 
 ## Hard refresh
 
@@ -171,8 +183,9 @@ A refresh is where the two visitors have to be told apart, and they are:
   — those pages are public, so a refresh re-renders the reading from this
   browser's local history instead of throwing the visitor back to the landing.
   The measurement they just made is not lost by pressing F5.
-- **Signed in** — the session is Supabase's own cookie, so a refresh on `/` goes
-  straight to `/dashboard`, and no daily login is asked for. Nothing is
+- **Signed in** — the session is Supabase's own cookie, so nothing asks for a
+  daily login. A refresh on `/` still shows the landing, now offering
+  "Go to dashboard"; a refresh on an app route re-renders that route. Nothing is
   re-consented and no Layer 1 step is repeated.
 
 The one thing a refresh does drop is the *interpretation* of an unsigned session

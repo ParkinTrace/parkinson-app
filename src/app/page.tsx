@@ -1,10 +1,10 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/ui";
 import { Trace } from "@/components/Trace";
 import { isSupabaseConfigured } from "@/lib/config";
-import { getOnboardingState } from "@/lib/onboarding";
+import { getOnboardingState, type OnboardingState } from "@/lib/onboarding";
 
 /* Layer 1 and Layer 2 are a genuine progression — population reference
    first, then your own baseline — so numbering them encodes something
@@ -34,19 +34,29 @@ const STEPS = [
 export default function LandingPage() {
   const router = useRouter();
 
+  /* The landing page is the front door, so it stays where it is. It used to
+     replace itself with /dashboard or /consent the moment a session existed,
+     which made the page impossible to read while signed in and gave no clue
+     which account was open. The account state now only changes what the
+     "Start here" panel offers. */
+  const [account, setAccount] = useState<OnboardingState>("anonymous");
+
   useEffect(() => {
     let active = true;
-    const go = async () => {
-      if (!isSupabaseConfigured) return;
-      const state = await getOnboardingState();
-      if (!active || state === "anonymous") return;
-      router.replace(state === "complete" ? "/dashboard" : "/consent");
-    };
-    go();
+    if (!isSupabaseConfigured) return;
+    getOnboardingState()
+      .then((state) => {
+        if (active) setAccount(state);
+      })
+      .catch(() => {
+        /* the signed-out panel is the safe default */
+      });
     return () => {
       active = false;
     };
-  }, [router]);
+  }, []);
+
+  const signedIn = account !== "anonymous";
 
   return (
     <div className="flex flex-col">
@@ -78,15 +88,36 @@ export default function LandingPage() {
               Start here
             </h2>
             <p className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
-              Try Layer 1 now — no account needed. Or sign in and keep a baseline.
+              {account === "complete"
+                ? "You are signed in — your baseline is on the dashboard."
+                : signedIn
+                  ? "You are signed in. Your setup is not finished."
+                  : "Try Layer 1 now — no account needed. Or sign in and keep a baseline."}
             </p>
 
             <div className="mt-4 flex flex-col gap-2">
-              <PrimaryButton onClick={() => router.push("/consent")}>
-                Give consent and try Layer 1
-              </PrimaryButton>
-              <SecondaryButton onClick={() => router.push("/signup")}>Sign up</SecondaryButton>
-              <SecondaryButton onClick={() => router.push("/login")}>Log in</SecondaryButton>
+              {account === "complete" ? (
+                <>
+                  <PrimaryButton onClick={() => router.push("/dashboard")}>
+                    Go to dashboard
+                  </PrimaryButton>
+                  <SecondaryButton onClick={() => router.push("/test")}>
+                    New typing session
+                  </SecondaryButton>
+                </>
+              ) : signedIn ? (
+                <PrimaryButton onClick={() => router.push("/consent")}>
+                  Resume setup
+                </PrimaryButton>
+              ) : (
+                <>
+                  <PrimaryButton onClick={() => router.push("/consent")}>
+                    Give consent and try Layer 1
+                  </PrimaryButton>
+                  <SecondaryButton onClick={() => router.push("/signup")}>Sign up</SecondaryButton>
+                  <SecondaryButton onClick={() => router.push("/login")}>Log in</SecondaryButton>
+                </>
+              )}
             </div>
 
             {!isSupabaseConfigured && (
@@ -95,25 +126,29 @@ export default function LandingPage() {
               </p>
             )}
 
-            <div className="mt-5 border-t border-hair pt-4">
-              <p className="label">What happens next</p>
-              <ol className="mt-3 flex flex-col gap-2.5">
-                {STEPS.map((s) => (
-                  <li key={s.n} className="flex gap-3 text-[13px] leading-snug">
-                    <span className="mt-px font-mono text-[11px] font-medium text-muted">
-                      {s.n}
-                    </span>
-                    <span>
-                      <span className="font-semibold text-ink">{s.label}</span>
-                      <span className="text-ink-soft"> — {s.detail}</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-4 text-xs leading-relaxed text-muted">
-                Nothing is measured until you have given consent.
-              </p>
-            </div>
+            {/* The sign-up walkthrough is for someone who has not signed up.
+                A signed-in visitor is past it. */}
+            {!signedIn && (
+              <div className="mt-5 border-t border-hair pt-4">
+                <p className="label">What happens next</p>
+                <ol className="mt-3 flex flex-col gap-2.5">
+                  {STEPS.map((s) => (
+                    <li key={s.n} className="flex gap-3 text-[13px] leading-snug">
+                      <span className="mt-px font-mono text-[11px] font-medium text-muted">
+                        {s.n}
+                      </span>
+                      <span>
+                        <span className="font-semibold text-ink">{s.label}</span>
+                        <span className="text-ink-soft"> — {s.detail}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-4 text-xs leading-relaxed text-muted">
+                  Nothing is measured until you have given consent.
+                </p>
+              </div>
+            )}
           </Card>
         </aside>
 
