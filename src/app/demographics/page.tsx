@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Card, Field, PrimaryButton, inputCls } from "@/components/ui";
+import { Card, Field, OnboardingShell, PrimaryButton, inputCls } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 
 /** Context only. Typing experience never gates measurement and never
@@ -52,16 +52,18 @@ export default function DemographicsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-xl">
-      <h1 className="text-2xl font-bold">Context</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Optional background. Nothing here blocks or delays your first measured session.
-      </p>
-      <Card className="mt-4">
+    <OnboardingShell
+      step={2}
+      steps={["Consent", "Context", "Choose"]}
+      title="Background context"
+      description="All of this is optional. It never changes how the timing is measured, and it is never used as a model input — it only helps interpret results for your age and setup."
+    >
+      <Card>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <Field label="Age (optional)">
             <input className={inputCls} type="number" min={0} max={130} {...register("age")} />
           </Field>
+
           <Field label="Sex / gender (optional)">
             <select className={inputCls} {...register("gender")} defaultValue="">
               <option value="">Prefer not to say</option>
@@ -71,14 +73,20 @@ export default function DemographicsPage() {
               <option value="unknown">Unknown</option>
             </select>
           </Field>
-          <Field label="Typing experience (context only — no practice session)">
+
+          <Field label="Typing experience (optional)">
             <select className={inputCls} {...register("typingExperience")} defaultValue="">
               <option value="">Skip</option>
               <option value="regular">Regular / experienced</option>
               <option value="occasional">Occasional</option>
               <option value="not_familiar">Not familiar</option>
             </select>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted">
+              Recorded as context only. Your first session is a real measurement — there is no practice
+              session, and typing experience does not gate anything.
+            </p>
           </Field>
+
           <Field label="Parkinson context (optional)">
             <select className={inputCls} {...register("parkinsonContext")} defaultValue="">
               <option value="">Skip</option>
@@ -87,12 +95,17 @@ export default function DemographicsPage() {
               <option value="research">Healthy / research participant</option>
             </select>
           </Field>
-          <Field label="Diagnosis year (optional, diagnosed participants)">
+
+          <Field label="Year of diagnosis (optional)">
             <input className={inputCls} type="number" min={1900} max={2100} {...register("diagnosisYear")} />
           </Field>
-          <PrimaryButton type="submit">Continue</PrimaryButton>
+
+          <div className="flex items-center gap-3 pt-1">
+            <PrimaryButton type="submit">Continue</PrimaryButton>
+            <span className="text-xs text-muted">You can skip every field.</span>
+          </div>
         </form>
       </Card>
-    </div>
+    </OnboardingShell>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, PrimaryButton } from "@/components/ui";
+import { Card, PageHeader, PrimaryButton } from "@/components/ui";
 import { PinInputModal } from "@/components/PinInputModal";
 import { PinSetupModal } from "@/components/PinSetupModal";
 import { useMotorTaskCapture } from "@/hooks/useTypingCapture";
@@ -13,16 +13,17 @@ import { isApiConfigured } from "@/lib/config";
 import { fetchPinStatus, isSessionUnlocked, lockSession } from "@/lib/pinClient";
 import type { SessionPayload } from "@/lib/types";
 
+const DURATION_MS = 15_000;
+
 /** F/J alternating tap task, 15 s. Own recorder + own feature path —
  *  never mixed into typing HT/FT/IKL statistics. */
 export default function MotorTaskPage() {
   const router = useRouter();
-  const { active, taps, remaining, start, getTaps } = useMotorTaskCapture(15_000);
+  const { active, taps, remaining, start, getTaps } = useMotorTaskCapture(DURATION_MS);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // PIN security states
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
   const [pinVerified, setPinVerified] = useState(false);
@@ -47,13 +48,9 @@ export default function MotorTaskPage() {
       begin();
       return;
     }
-
     const hasPin = await fetchPinStatus();
-    if (!hasPin) {
-      setIsSetupModalOpen(true);
-    } else {
-      setIsPinModalOpen(true);
-    }
+    if (!hasPin) setIsSetupModalOpen(true);
+    else setIsPinModalOpen(true);
   };
 
   const handlePinSuccess = () => {
@@ -72,7 +69,7 @@ export default function MotorTaskPage() {
     const endedAt = new Date().toISOString();
     const feats = extractMotorFeatures(raw);
     if (!isApiConfigured) {
-      setError("Analysis service not configured — showing on-device preview only.");
+      setError("Analysis service not configured — showing the on-device preview only.");
       saveSnapshot({
         sessionId: sessionIdRef.current,
         startedAt: startedAt!,
@@ -105,7 +102,7 @@ export default function MotorTaskPage() {
         deviceId: stableDeviceId(),
         startedAt: startedAt!,
         endedAt,
-        durationMs: 15_000,
+        durationMs: DURATION_MS,
         keystrokeCount: raw.length,
         qualityFlags: [],
         events: [],
@@ -120,7 +117,9 @@ export default function MotorTaskPage() {
         endedAt,
         sessionType: "motor_task",
         deviceId: payload.deviceId,
-        features: (analysis["features"] as Record<string, number | null>) ?? (feats as unknown as Record<string, number | null>),
+        features:
+          (analysis["features"] as Record<string, number | null>) ??
+          (feats as unknown as Record<string, number | null>),
         layer1: (a["layer1"] as Record<string, unknown>) ?? null,
         layer2: (a["layer2"] as Record<string, unknown>) ?? null,
         series: null,
@@ -139,44 +138,77 @@ export default function MotorTaskPage() {
     }
   };
 
+  const elapsedPct = Math.min(100, Math.max(0, ((DURATION_MS - remaining * 1000) / DURATION_MS) * 100));
+
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Motor task — F/J alternation</h1>
-        <button
-          type="button"
-          onClick={() => setIsSetupModalOpen(true)}
-          className="text-xs text-slate-500 hover:text-teal-700 font-medium"
-        >
-          ⚙️ Change Session PIN
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Measurement"
+        title="Motor task — F/J alternation"
+        description="Alternate the F and J keys as steadily as you can for 15 seconds. This task is tracked in your personal trend only — it is never compared against a population."
+        actions={
+          <button
+            type="button"
+            onClick={() => setIsSetupModalOpen(true)}
+            className="rounded-md border border-hair px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
+          >
+            Change session PIN
+          </button>
+        }
+      />
 
-      <p className="mt-1 text-sm text-slate-600">
-        Alternate the <strong>F</strong> and <strong>J</strong> keys as steadily as you can for 15
-        seconds. Tracked in your personal trend only — no population comparison.
-      </p>
+      <Card className="mt-6">
+        <div className="flex flex-col items-center py-2">
+          <p className="label">Time remaining</p>
+          <p
+            className={`mt-2 font-mono text-6xl font-semibold leading-none tabular-nums ${
+              active ? "text-ink" : "text-muted"
+            }`}
+          >
+            {remaining.toFixed(0)}
+            <span className="ml-1 text-2xl">s</span>
+          </p>
 
-      <Card className="mt-4 text-center">
-        <p className="text-5xl font-bold">{remaining.toFixed(0)}s</p>
-        <p className="mt-1 text-slate-600">{taps} taps</p>
-        <div className="mt-4 flex justify-center gap-3">
-          {!active && !startedAt && (
-            <PrimaryButton onClick={handleStartTaskClick}>
-              {pinVerified ? "Start 15-second task" : "🔒 Unlock & Start task"}
-            </PrimaryButton>
-          )}
-          {active && <p className="font-semibold text-teal-700">Alternate F and J…</p>}
-          {!active && startedAt && (
-            <PrimaryButton onClick={finish} disabled={busy}>
-              {busy ? "Analyzing…" : "Finish & analyze"}
-            </PrimaryButton>
+          <div className="mt-5 h-1 w-full max-w-sm overflow-hidden rounded-full bg-hair" aria-hidden>
+            <div
+              className="h-full rounded-full bg-trace transition-[width] duration-200"
+              style={{ width: `${elapsedPct}%` }}
+            />
+          </div>
+
+          <p className="mt-4 font-mono text-sm tabular-nums text-ink-soft">
+            <span className="text-ink">{taps}</span> taps
+          </p>
+
+          <div className="mt-6 flex min-h-[44px] items-center justify-center">
+            {!active && !startedAt && (
+              <PrimaryButton onClick={handleStartTaskClick}>
+                {pinVerified ? `Start ${DURATION_MS / 1000}-second task` : "Unlock and start task"}
+              </PrimaryButton>
+            )}
+            {active && (
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-trace" aria-hidden />
+                <span className="text-sm font-semibold tracking-tight text-ink">
+                  Recording — alternate F and J
+                </span>
+              </span>
+            )}
+            {!active && startedAt && (
+              <PrimaryButton onClick={finish} disabled={busy}>
+                {busy ? "Analysing…" : "Finish & analyze"}
+              </PrimaryButton>
+            )}
+          </div>
+
+          {error && (
+            <p className="mt-3 rounded-md border border-signal/35 bg-signal-wash px-3 py-2 text-xs text-[#8a5a06]">
+              {error}
+            </p>
           )}
         </div>
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </Card>
 
-      {/* 4-Digit PIN Verification Modal */}
       <PinInputModal
         isOpen={isPinModalOpen}
         onSuccess={handlePinSuccess}
@@ -187,7 +219,6 @@ export default function MotorTaskPage() {
         onCancel={() => setIsPinModalOpen(false)}
       />
 
-      {/* 4-Digit PIN Setup Modal */}
       <PinSetupModal
         isOpen={isSetupModalOpen}
         onSuccess={handleSetupSuccess}

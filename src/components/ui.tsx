@@ -39,19 +39,25 @@ export function PrimaryButton({
   onClick,
   type = "button",
   disabled = false,
+  href,
+  className = "",
 }: {
   children: ReactNode;
   onClick?: () => void;
   type?: "button" | "submit";
   disabled?: boolean;
+  href?: string;
+  className?: string;
 }) {
+  const cls = `inline-block rounded-md bg-ink px-5 py-2.5 text-center text-sm font-semibold tracking-tight text-white transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-45 ${className}`;
+  if (href)
+    return (
+      <a href={href} className={cls}>
+        {children}
+      </a>
+    );
   return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      className="rounded-md bg-ink px-5 py-2.5 text-sm font-semibold tracking-tight text-white transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-45"
-    >
+    <button type={type} disabled={disabled} onClick={onClick} className={cls}>
       {children}
     </button>
   );
@@ -61,13 +67,14 @@ export function SecondaryButton({
   children,
   onClick,
   href,
+  className = "",
 }: {
   children: ReactNode;
   onClick?: () => void;
   href?: string;
+  className?: string;
 }) {
-  const cls =
-    "inline-block rounded-md border border-hair bg-paper px-5 py-2.5 text-sm font-semibold tracking-tight text-ink transition-colors hover:border-ink/30 hover:bg-canvas";
+  const cls = `inline-block rounded-md border border-hair bg-paper px-5 py-2.5 text-center text-sm font-semibold tracking-tight text-ink transition-colors hover:border-ink/30 hover:bg-canvas ${className}`;
   if (href)
     return (
       <a href={href} className={cls}>
@@ -85,7 +92,7 @@ export function SecondaryButton({
    a state dot, and a colour that means something. */
 export function StatusBadge({ status }: { status: string }) {
   const tone =
-    status === "attention" || status === "elevated"
+    status === "attention" || status === "elevated" || status === "device_mismatch"
       ? "border-alert/25 bg-alert-wash text-alert"
       : status === "watch" || status === "building"
         ? "border-signal/35 bg-signal-wash text-[#8a5a06]"
@@ -141,3 +148,161 @@ export function Field({
 
 export const inputCls =
   "w-full rounded-md border border-hair bg-paper px-3 py-2 text-[15px] text-ink transition-colors placeholder:text-muted/70 focus:border-trace";
+
+/* ------------------------------------------------------------------ */
+/* Instrument furniture                                                */
+/* ------------------------------------------------------------------ */
+
+/** Every screen opens the same way: an eyebrow that says which part of
+ *  the instrument you are in, the heading, and an optional plain-language
+ *  description. Consistency here is what makes the app feel like one
+ *  device rather than a set of pages. */
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  actions,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <header className="border-b border-hair pb-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          {eyebrow && <p className="label">{eyebrow}</p>}
+          <h1 className="mt-2 font-display text-[26px] font-semibold leading-tight tracking-tight text-ink">
+            {title}
+          </h1>
+          {description && (
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">{description}</p>
+          )}
+        </div>
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      </div>
+    </header>
+  );
+}
+
+/** A single measurement, laid out as a row rather than a stat card: the
+ *  name and its provenance on the left, the number in monospace on the
+ *  right. Numbers get tabular figures so a column of them lines up. */
+export function Readout({
+  label,
+  value,
+  unit,
+  hint,
+  state,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  hint?: string;
+  state?: ReactNode;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-b border-hair py-2.5 last:border-b-0">
+      <dt className="min-w-0">
+        <span className="text-[13px] font-medium text-ink">{label}</span>
+        {hint && <span className="label mt-0.5 block normal-case tracking-normal">{hint}</span>}
+      </dt>
+      <dd className="flex shrink-0 items-baseline gap-3">
+        <span className="font-mono text-[15px] font-semibold tabular-nums text-ink">{value}</span>
+        {unit && <span className="label">{unit}</span>}
+        {state}
+      </dd>
+    </div>
+  );
+}
+
+/** Only two states are worth a colour: inside your own range, or outside
+ *  it. Anything else is genuinely unknown and says so. */
+export function StateDot({ state }: { state: "unknown" | "normal" | "elevated" }) {
+  const map = {
+    unknown: { dot: "bg-muted/40", text: "No baseline reference" },
+    normal: { dot: "bg-trace", text: "Within personal range" },
+    elevated: { dot: "bg-signal", text: "Above personal range" },
+  } as const;
+  const s = map[state];
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} aria-hidden />
+      <span className="label">{s.text}</span>
+    </span>
+  );
+}
+
+/** Progress toward a baseline: a hairline track with a measured fill. */
+export function Meter({
+  value,
+  max,
+  caption,
+}: {
+  value: number;
+  max: number;
+  caption?: string;
+}) {
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <span className="font-mono text-xs tabular-nums text-ink">
+          {value}
+          <span className="text-muted"> / {max}</span>
+        </span>
+        {caption && <span className="label">{caption}</span>}
+      </div>
+      <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-hair" aria-hidden>
+        <div className="h-full rounded-full bg-trace transition-[width]" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/** Setup runs in a fixed order, so it is numbered. Green marks the step
+ *  you are on; every other step stays quiet. */
+export function OnboardingShell({
+  step,
+  steps,
+  title,
+  description,
+  children,
+}: {
+  step: number;
+  steps: string[];
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mx-auto max-w-xl">
+      <ol className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Setup progress">
+        {steps.map((s, i) => {
+          const n = i + 1;
+          const current = n === step;
+          const done = n < step;
+          return (
+            <li key={s} className="flex items-center gap-3">
+              {i > 0 && <span className="h-px w-4 bg-hair" aria-hidden />}
+              <span
+                className={`label ${current ? "text-ink" : ""} ${done ? "line-through decoration-trace/40" : ""}`}
+              >
+                <span className={current ? "text-trace" : ""}>{String(n).padStart(2, "0")}</span>
+                <span className="ml-1.5">{s}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <h1 className="mt-6 font-display text-[26px] font-semibold leading-tight tracking-tight text-ink">
+        {title}
+      </h1>
+      {description && <p className="mt-2 text-sm leading-relaxed text-ink-soft">{description}</p>}
+
+      <div className="mt-5">{children}</div>
+    </div>
+  );
+}

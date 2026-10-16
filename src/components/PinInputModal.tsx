@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { PrimaryButton, SecondaryButton } from "@/components/ui";
 import { verifyPin } from "@/lib/pinClient";
 
 interface PinInputModalProps {
@@ -17,11 +18,7 @@ export function PinInputModal(props: PinInputModalProps) {
   return <PinInputModalInner {...props} />;
 }
 
-function PinInputModalInner({
-  onSuccess,
-  onRequestSetup,
-  onCancel,
-}: PinInputModalProps) {
+function PinInputModalInner({ onSuccess, onRequestSetup, onCancel }: PinInputModalProps) {
   const [digits, setDigits] = useState<string[]>(["", "", "", ""]);
   const [masked, setMasked] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
@@ -38,7 +35,6 @@ function PinInputModalInner({
   }, []);
 
   const handleChange = (index: number, value: string) => {
-    // Only accept numeric digit
     const cleaned = value.replace(/\D/g, "");
     if (!cleaned) {
       const next = [...digits];
@@ -47,17 +43,15 @@ function PinInputModalInner({
       return;
     }
 
-    const digit = cleaned[cleaned.length - 1]; // take last entered digit
+    const digit = cleaned[cleaned.length - 1];
     const next = [...digits];
     next[index] = digit;
     setDigits(next);
     setError("");
 
-    // Auto advance
     if (index < 3) {
       inputsRef.current[index + 1]?.focus();
     } else {
-      // Completed 4 digits -> automatically submit
       const fullPin = next.join("");
       if (fullPin.length === 4) {
         submitPin(fullPin);
@@ -121,74 +115,61 @@ function PinInputModalInner({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm">
       <div
-        className={`w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 transition-transform ${
+        className={`w-full max-w-sm rounded-lg border border-hair bg-paper p-6 shadow-xl ${
           shake ? "animate-shake" : ""
         }`}
       >
-        <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 text-teal-600 mb-3">
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">Session Access PIN</h3>
-          <p className="mt-1 text-xs text-slate-600">
-            Enter your 4-digit security PIN to unlock today&apos;s typing session.
-          </p>
-        </div>
+        <p className="label">Session PIN · verify</p>
+        <h3 className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
+          Session Access PIN
+        </h3>
+        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+          Enter your 4-digit PIN to unlock this measured session. Nothing is recorded until it is unlocked.
+        </p>
 
         {error && (
-          <div className="mt-3 rounded-lg bg-rose-50 p-2 text-center text-xs font-medium text-rose-700 border border-rose-200">
+          <p className="mt-4 rounded-md border border-alert/25 bg-alert-wash px-3 py-2 text-xs text-alert">
             {error}
-          </div>
+          </p>
         )}
 
-        {/* 4 Digit Boxes */}
-        <div className="mt-5 flex justify-center gap-3">
-          {digits.map((digit, idx) => (
-            <input
-              key={idx}
-              ref={(el) => {
-                inputsRef.current[idx] = el;
-              }}
-              type={masked ? "password" : "text"}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={1}
-              value={digit}
-              disabled={loading}
-              onChange={(e) => handleChange(idx, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(idx, e)}
-              onPaste={handlePaste}
-              className={`h-14 w-12 rounded-xl text-center text-2xl font-bold transition-all border outline-hidden ${
-                error
-                  ? "border-rose-400 bg-rose-50/50 text-rose-900 focus:ring-2 focus:ring-rose-400"
-                  : "border-slate-300 bg-slate-50 text-slate-900 focus:border-teal-600 focus:bg-white focus:ring-2 focus:ring-teal-500/20"
-              }`}
-            />
-          ))}
+        <div className="mt-5">
+          <span className="label">4-digit PIN</span>
+          <div className="mt-2 flex justify-center gap-3">
+            {digits.map((digit, idx) => (
+              <input
+                key={idx}
+                ref={(el) => {
+                  inputsRef.current[idx] = el;
+                }}
+                type={masked ? "password" : "text"}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={1}
+                value={digit}
+                disabled={loading}
+                onChange={(e) => handleChange(idx, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(idx, e)}
+                onPaste={handlePaste}
+                className={`h-14 w-12 rounded-md border text-center font-mono text-2xl font-semibold transition-colors disabled:opacity-50 ${
+                  error
+                    ? "border-alert/50 bg-alert-wash text-alert"
+                    : "border-hair bg-canvas text-ink focus:border-trace focus:bg-paper"
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between text-xs text-slate-500 px-1">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-slate-700">
+        <div className="mt-3 flex items-center justify-between px-1">
+          <label className="flex cursor-pointer select-none items-center gap-1.5 text-xs text-muted hover:text-ink">
             <input
               type="checkbox"
               checked={!masked}
               onChange={(e) => setMasked(!e.target.checked)}
-              className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+              className="h-3.5 w-3.5 accent-[#0e7c66]"
             />
             Show digits
           </label>
@@ -196,7 +177,7 @@ function PinInputModalInner({
             <button
               type="button"
               onClick={onRequestSetup}
-              className="text-teal-700 hover:text-teal-900 font-medium hover:underline"
+              className="text-xs font-semibold text-trace underline decoration-trace/30 underline-offset-2"
             >
               Reset / Change PIN
             </button>
@@ -204,24 +185,21 @@ function PinInputModalInner({
         </div>
 
         <div className="mt-6 flex flex-col gap-2">
-          <button
-            type="button"
+          <PrimaryButton
             onClick={() => submitPin()}
             disabled={loading || digits.join("").length !== 4}
-            className="w-full justify-center rounded-xl bg-teal-600 px-5 py-2.5 font-semibold text-white hover:bg-teal-700 focus:outline-hidden focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            className="w-full disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Verifying..." : "Unlock & Start Session"}
-          </button>
+            {loading ? "Verifying…" : "Unlock & Start Session"}
+          </PrimaryButton>
 
           {onCancel && (
-            <button
-              type="button"
+            <SecondaryButton
               onClick={onCancel}
-              disabled={loading}
-              className="w-full justify-center rounded-xl border border-slate-300 bg-white px-5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-teal-500 disabled:opacity-50 transition-colors"
+              className="w-full py-2 text-xs transition-colors disabled:opacity-50"
             >
               Cancel
-            </button>
+            </SecondaryButton>
           )}
         </div>
       </div>

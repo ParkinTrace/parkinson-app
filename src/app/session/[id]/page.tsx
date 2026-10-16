@@ -1,6 +1,6 @@
 "use client";
 import { use, useEffect, useState } from "react";
-import { Card, EmptyState, SecondaryButton, StatusBadge } from "@/components/ui";
+import { Card, EmptyState, PageHeader, Readout, SecondaryButton, StatusBadge } from "@/components/ui";
 import { RhythmChart } from "@/components/charts";
 import { fetchSessionExact } from "@/lib/session";
 import { loadSnapshot, type Snapshot } from "@/lib/localCache";
@@ -56,55 +56,96 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
 
   if (missing) {
     return (
-      <div>
-        <h1 className="text-2xl font-bold">Session insight</h1>
-        <div className="mt-4">
-          <EmptyState title="Session not found" body={`No session with id ${id} exists for this user.`} />
-          <div className="mt-3"><SecondaryButton href="/dashboard">Back to dashboard</SecondaryButton></div>
+      <div className="flex flex-col gap-6">
+        <PageHeader eyebrow="Exact session" title="Session insight" />
+        <EmptyState
+          title="Session not found"
+          body={`No session with id ${id} exists for this user. Another session is never substituted.`}
+        />
+        <div>
+          <SecondaryButton href="/dashboard">Back to dashboard</SecondaryButton>
         </div>
       </div>
     );
   }
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (!snap) return <p>Loading…</p>;
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader eyebrow="Exact session" title="Session insight" />
+        <p className="rounded-md border border-alert/25 bg-alert-wash px-3 py-2 text-sm text-alert">{error}</p>
+      </div>
+    );
+  }
+
+  if (!snap) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader eyebrow="Exact session" title="Session insight" />
+        <p className="text-sm text-muted">Loading session…</p>
+      </div>
+    );
+  }
 
   const l1 = (snap.layer1 ?? {}) as Record<string, unknown>;
   const l2 = (snap.layer2 ?? {}) as Record<string, unknown>;
   const f = snap.features;
+  const ms = (v: number | null | undefined) => (typeof v === "number" ? v.toFixed(0) : "—");
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Session insight</h1>
-      <p className="font-mono text-xs text-slate-500">session {snap.sessionId}</p>
-      <p className="text-sm text-slate-600">
-        {snap.startedAt.slice(0, 16).replace("T", " ")} · {snap.sessionType} · device {snap.deviceId}
-        {snap.localPreview ? " · on-device preview (not yet analyzed)" : ""}
-      </p>
-      <div className="mt-4 flex flex-col gap-3">
-        <Card>
-          <h3 className="font-semibold">Session metrics</h3>
-          <dl className="mt-2 grid grid-cols-2 gap-1 text-sm">
-            <dt>Hold time</dt><dd>{f.ht_mean?.toFixed(0) ?? "—"} ms</dd>
-            <dt>Flight time</dt><dd>{f.ft_mean?.toFixed(0) ?? "—"} ms</dd>
-            <dt>Inter-key latency</dt><dd>{f.ikl_mean?.toFixed(0) ?? "—"} ms</dd>
-            <dt>Typing speed</dt><dd>{f.typing_speed?.toFixed(2) ?? "—"} keys/s</dd>
-            <dt>Consistency</dt><dd>{f.session_consistency?.toFixed(2) ?? "—"}</dd>
-            <dt>Pause frequency</dt><dd>{f.pause_frequency?.toFixed(1) ?? "—"}/min</dd>
-          </dl>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3">
-            <StatusBadge status={String(l1["status"] ?? l2["status"] ?? "preview")} />
-            <p className="text-sm text-slate-700">
-              {String(l1["message"] ?? l2["message"] ?? "Session saved. Baseline status: building.")}
-            </p>
-          </div>
-          {typeof l2["baselineStatus"] === "string" && (
-            <p className="mt-2 text-sm text-slate-600">Baseline: {l2["baselineStatus"]}</p>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="Exact session"
+        title="Session insight"
+        description={`${snap.startedAt.slice(0, 16).replace("T", " ")} · ${snap.sessionType} · device ${snap.deviceId}${
+          snap.localPreview ? " · on-device preview (not yet analysed)" : ""
+        }`}
+        actions={<SecondaryButton href="/history">All sessions</SecondaryButton>}
+      />
+
+      <p className="font-mono text-[11px] text-muted">session {snap.sessionId}</p>
+
+      <Card>
+        <div className="flex items-center justify-between gap-3 border-b border-hair pb-3">
+          <h2 className="label">Measured timing</h2>
+          <StatusBadge status={String(l1["status"] ?? l2["status"] ?? "preview")} />
+        </div>
+
+        <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+          {String(
+            l1["message"] ?? l2["message"] ?? "Session saved. Baseline status: building.",
           )}
-        </Card>
-        <RhythmChart series={snap.series} />
-      </div>
+        </p>
+
+        {typeof l2["baselineStatus"] === "string" && (
+          <p className="mt-1 text-xs text-muted">Baseline: {l2["baselineStatus"]}</p>
+        )}
+
+        <dl className="mt-4 flex flex-col">
+          <Readout label="Hold time" value={ms(f.ht_mean)} unit="ms" hint="How long each key stays down" />
+          <Readout label="Flight time" value={ms(f.ft_mean)} unit="ms" hint="Gap before the next keypress" />
+          <Readout label="Inter-key latency" value={ms(f.ikl_mean)} unit="ms" hint="Press to press" />
+          <Readout
+            label="Typing speed"
+            value={typeof f.typing_speed === "number" ? f.typing_speed.toFixed(2) : "—"}
+            unit="keys/s"
+          />
+          <Readout
+            label="Rhythm consistency"
+            value={typeof f.session_consistency === "number" ? f.session_consistency.toFixed(2) : "—"}
+            unit="CV"
+            hint="Variability divided by mean"
+          />
+          <Readout
+            label="Pause frequency"
+            value={typeof f.pause_frequency === "number" ? f.pause_frequency.toFixed(1) : "—"}
+            unit="per min"
+            hint="Hesitations over 500 ms"
+          />
+        </dl>
+      </Card>
+
+      <RhythmChart series={snap.series} />
     </div>
   );
 }

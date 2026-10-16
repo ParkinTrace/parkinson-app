@@ -19,14 +19,17 @@ import type { CSSProperties } from "react";
 const SAMPLE_HOLD = [71, 78, 74, 83, 69, 76, 88, 72, 80, 75, 84, 70, 77, 73];
 const SAMPLE_FLIGHT = [92, 104, 88, 97, 113, 95, 90, 101, 86, 108, 94, 99, 91, 106];
 
-/* One axis for both series: 60 ms at the baseline, 120 ms at the top. */
-const DOMAIN_MIN = 60;
-const DOMAIN_MAX = 120;
+/* One axis for both series: 60 ms at the baseline, 120 ms at the top.
+   Live sessions pass their own domain, because a real typist can sit
+   well outside the sample range and a clamped bar would lie. */
+const DEFAULT_DOMAIN: [number, number] = [60, 120];
 const RANGE_MIN = 12;
 const RANGE_MAX = 100;
 
-function barHeight(ms: number) {
-  const t = (ms - DOMAIN_MIN) / (DOMAIN_MAX - DOMAIN_MIN);
+function barHeight(ms: number, [min, max]: [number, number]) {
+  const span = max - min;
+  if (span <= 0) return RANGE_MIN;
+  const t = (ms - min) / span;
   const clamped = Math.max(0, Math.min(1, t));
   return RANGE_MIN + clamped * (RANGE_MAX - RANGE_MIN);
 }
@@ -34,12 +37,14 @@ function barHeight(ms: number) {
 export function Trace({
   hold = SAMPLE_HOLD,
   flight = SAMPLE_FLIGHT,
+  domain = DEFAULT_DOMAIN,
   animate = true,
   height = 116,
   className = "",
 }: {
   hold?: number[];
   flight?: number[];
+  domain?: [number, number];
   animate?: boolean;
   height?: number;
   className?: string;
@@ -60,7 +65,7 @@ export function Trace({
               className={`w-full rounded-t-[1px] bg-trace ${animate ? "trace-bar" : ""}`}
               style={
                 {
-                  height: `${barHeight(h)}%`,
+                  height: `${barHeight(h, domain)}%`,
                   animationDelay: `${i * 42}ms`,
                 } satisfies CSSProperties
               }
@@ -71,7 +76,7 @@ export function Trace({
               }`}
               style={
                 {
-                  height: `${barHeight(flight[i] ?? 0)}%`,
+                  height: `${barHeight(flight[i] ?? 0, domain)}%`,
                   animationDelay: `${i * 42 + 21}ms`,
                 } satisfies CSSProperties
               }

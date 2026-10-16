@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { PrimaryButton, SecondaryButton } from "@/components/ui";
 import { setupPin } from "@/lib/pinClient";
 
 interface PinSetupModalProps {
@@ -17,11 +18,10 @@ export function PinSetupModal(props: PinSetupModalProps) {
   return <PinSetupModalInner {...props} />;
 }
 
-function PinSetupModalInner({
-  onSuccess,
-  onCancel,
-  isChangeMode = false,
-}: PinSetupModalProps) {
+const boxCls =
+  "h-14 w-12 rounded-md border border-hair bg-canvas text-center font-mono text-2xl font-semibold text-ink transition-colors focus:border-trace focus:bg-paper disabled:opacity-50";
+
+function PinSetupModalInner({ onSuccess, onCancel, isChangeMode = false }: PinSetupModalProps) {
   const [pin, setPin] = useState<string[]>(["", "", "", ""]);
   const [confirmPin, setConfirmPin] = useState<string[]>(["", "", "", ""]);
   const [currentPin] = useState<string>("");
@@ -57,7 +57,7 @@ function PinSetupModalInner({
     if (index < 3) {
       pinInputsRef.current[index + 1]?.focus();
     } else {
-      // Move to confirm step
+      // Move to the confirm row once the create row is complete.
       setStep("confirm");
       setTimeout(() => {
         confirmInputsRef.current[0]?.focus();
@@ -85,11 +85,7 @@ function PinSetupModalInner({
     }
   };
 
-  const handleKeyDown = (
-    index: number,
-    isConfirm: boolean,
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
+  const handleKeyDown = (index: number, isConfirm: boolean, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace") {
       const targetArray = isConfirm ? confirmPin : pin;
       const refArray = isConfirm ? confirmInputsRef : pinInputsRef;
@@ -129,54 +125,40 @@ function PinSetupModalInner({
     }
   };
 
+  const confirmReady = step === "confirm";
+  const canSave = pin.join("").length === 4 && confirmPin.join("").length === 4 && !loading;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
-        <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 text-teal-600 mb-3">
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">
-            {isChangeMode ? "Change Session PIN" : "Create 4-Digit Session PIN"}
-          </h3>
-          <p className="mt-1 text-xs text-slate-600">
-            {isChangeMode
-              ? "Update your numeric access PIN for clinical sessions."
-              : "Set a 4-digit numeric password required before daily measurements."}
-          </p>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-lg border border-hair bg-paper p-6 shadow-xl">
+        <p className="label">{isChangeMode ? "Session PIN · change" : "Session PIN · setup"}</p>
+        <h3 className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
+          {isChangeMode ? "Change Session PIN" : "Create 4-Digit Session PIN"}
+        </h3>
+        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+          {isChangeMode
+            ? "Replace the 4-digit PIN that unlocks a measured session."
+            : "Set a 4-digit PIN. It is required before every measured session, so nobody else can start one on this device."}
+        </p>
 
         {error && (
-          <div className="mt-3 rounded-lg bg-rose-50 p-2 text-center text-xs font-medium text-rose-700 border border-rose-200">
+          <p className="mt-4 rounded-md border border-alert/25 bg-alert-wash px-3 py-2 text-xs text-alert">
             {error}
-          </div>
+          </p>
         )}
 
-        {/* Enter PIN Section */}
+        {/* Enter PIN */}
         <div className="mt-5">
-          <div className="flex items-center justify-between text-xs font-medium text-slate-700 mb-1.5">
-            <span>Enter 4-Digit PIN:</span>
-            {step === "confirm" && (
+          <div className="mb-2 flex items-center justify-between">
+            <span className="label">Enter PIN</span>
+            {confirmReady && (
               <button
                 type="button"
                 onClick={() => {
                   setStep("create");
                   setTimeout(() => pinInputsRef.current[3]?.focus(), 50);
                 }}
-                className="text-teal-600 hover:text-teal-800 text-[11px]"
+                className="text-[11px] font-semibold text-trace underline decoration-trace/30 underline-offset-2"
               >
                 Edit
               </button>
@@ -197,16 +179,17 @@ function PinSetupModalInner({
                 disabled={loading}
                 onChange={(e) => handlePinChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, false, e)}
-                className="h-12 w-11 rounded-lg text-center text-xl font-bold border border-slate-300 bg-slate-50 focus:border-teal-600 focus:bg-white focus:ring-2 focus:ring-teal-500/20 outline-hidden"
+                className={boxCls}
               />
             ))}
           </div>
         </div>
 
-        {/* Confirm PIN Section */}
-        <div className={`mt-4 transition-opacity ${step === "create" ? "opacity-60" : "opacity-100"}`}>
-          <div className="text-xs font-medium text-slate-700 mb-1.5">
-            <span>Confirm 4-Digit PIN:</span>
+        {/* Confirm PIN */}
+        <div className={`mt-4 transition-opacity ${confirmReady ? "opacity-100" : "opacity-50"}`}>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="label">Confirm PIN</span>
+            <span className="label">{confirmReady ? "ready" : "waiting for the first row"}</span>
           </div>
           <div className="flex justify-center gap-2.5">
             {confirmPin.map((digit, idx) => (
@@ -223,31 +206,28 @@ function PinSetupModalInner({
                 disabled={loading}
                 onChange={(e) => handleConfirmChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, true, e)}
-                className="h-12 w-11 rounded-lg text-center text-xl font-bold border border-slate-300 bg-slate-50 focus:border-teal-600 focus:bg-white focus:ring-2 focus:ring-teal-500/20 outline-hidden"
+                className={boxCls}
               />
             ))}
           </div>
         </div>
 
         <div className="mt-6 flex flex-col gap-2">
-          <button
-            type="button"
+          <PrimaryButton
             onClick={handleSave}
-            disabled={loading || pin.join("").length !== 4 || confirmPin.join("").length !== 4}
-            className="w-full justify-center rounded-xl bg-teal-600 px-5 py-2.5 font-semibold text-white hover:bg-teal-700 focus:outline-hidden focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            disabled={!canSave}
+            className="w-full disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Saving..." : "Save PIN & Continue"}
-          </button>
+            {loading ? "Saving…" : "Save PIN & Continue"}
+          </PrimaryButton>
 
           {onCancel && (
-            <button
-              type="button"
+            <SecondaryButton
               onClick={onCancel}
-              disabled={loading}
-              className="w-full justify-center rounded-xl border border-slate-300 bg-white px-5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-teal-500 disabled:opacity-50 transition-colors"
+              className="w-full py-2 text-xs transition-colors disabled:opacity-50"
             >
               Cancel
-            </button>
+            </SecondaryButton>
           )}
         </div>
       </div>

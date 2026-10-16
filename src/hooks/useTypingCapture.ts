@@ -47,6 +47,11 @@ export function useTypingCapture() {
   const [count, setCount] = useState(0);
   const activeRef = useRef(false);
   const countRef = useRef(0);
+  /* Rolling (hold, flight) pairs for the live trace. Written in the
+     capture handlers and read during render — reading a ref cannot
+     desynchronise the timing path the way extra state would. */
+  const pairsRef = useRef<{ hold: number; flight: number }[]>([]);
+  const prevReleaseRef = useRef<number | null>(null);
 
   const onBlur = useCallback(() => {
     if (activeRef.current) qualityRef.current.blurs += 1;
@@ -87,6 +92,14 @@ export function useTypingCapture() {
       });
       countRef.current += 1;
       setCount(countRef.current);
+
+      const hold = release - press;
+      const prev = prevReleaseRef.current;
+      prevReleaseRef.current = release;
+      if (prev !== null) {
+        const flight = press - prev;
+        if (flight >= 0) pairsRef.current.push({ hold, flight });
+      }
     };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
@@ -103,6 +116,8 @@ export function useTypingCapture() {
     downRef.current.clear();
     qualityRef.current = { repeats: 0, unpairedKeyups: 0, blurs: 0, invalidSequences: 0 };
     countRef.current = 0;
+    pairsRef.current = [];
+    prevReleaseRef.current = null;
     setCount(0);
     activeRef.current = true;
     setActive(true);
@@ -115,7 +130,7 @@ export function useTypingCapture() {
     return { events: [...eventsRef.current], quality: { ...qualityRef.current } };
   }, []);
 
-  return { active, count, start, stop };
+  return { active, count, start, stop, getPairs: () => pairsRef.current };
 }
 
 export function useMotorTaskCapture(durationMs = 15_000) {

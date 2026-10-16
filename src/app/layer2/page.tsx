@@ -1,7 +1,17 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, EmptyState, PrimaryButton, SecondaryButton, StatusBadge } from "@/components/ui";
+import {
+  Card,
+  EmptyState,
+  Meter,
+  PageHeader,
+  PrimaryButton,
+  Readout,
+  SecondaryButton,
+  StateDot,
+  StatusBadge,
+} from "@/components/ui";
 import { LongitudinalChart, type TrendPoint } from "@/components/charts";
 import { ClinicianReportModal } from "@/components/ClinicianReportModal";
 import { baselineProgress } from "@/lib/baseline";
@@ -32,13 +42,13 @@ function metricState(
 }
 
 const INDICATOR_OPTIONS = [
-  { key: "ht_mean", label: "Hold Time (ms)", desc: "Average duration key is held down (primary indicator of fine-motor bradykinesia)" },
+  { key: "ht_mean", label: "Hold Time (ms)", desc: "How long each key is held down, on average." },
   { key: "ft_mean", label: "Flight Time (ms)", desc: "Transition delay between releasing one key and pressing the next" },
   { key: "ikl_mean", label: "Inter-Key Latency (ms)", desc: "Total elapsed time between successive keypresses (typing pace)" },
   { key: "typing_speed", label: "Typing Speed (keys/s)", desc: "Keypresses completed per second" },
-  { key: "pause_frequency", label: "Pause Frequency (/min)", desc: "Hesitations exceeding 500 ms (micro-freezes)" },
-  { key: "session_consistency", label: "Rhythm Consistency", desc: "Variability normalized by mean rhythm (steadiness)" },
-  { key: "hand_asymmetry", label: "Hand Asymmetry", desc: "Left vs right hand hold duration discrepancy (unilateral signs)" },
+  { key: "pause_frequency", label: "Pause Frequency (/min)", desc: "Hesitations exceeding 500 ms" },
+  { key: "session_consistency", label: "Rhythm Consistency", desc: "Variability normalised by mean rhythm (steadiness)" },
+  { key: "hand_asymmetry", label: "Hand Asymmetry", desc: "Left versus right hand hold-duration difference" },
 ];
 
 // Sample Research Cohort Profile (for demo / presentation evaluation)
@@ -101,7 +111,7 @@ function generateDemoData() {
     eventDate: new Date(baseDate.getTime() + 10 * 86400000).toISOString(),
     eventType: "medication_change",
     description: "Initiated Levodopa/Carbidopa 100/25 mg BID",
-    notes: "Clinical titration directed by neurologist. Correlates with reduction in fine-motor hold latency.",
+    notes: "Titration directed by neurologist. Recorded so keystroke timing before and after can be compared.",
     createdAt: new Date().toISOString(),
   };
 
@@ -347,23 +357,34 @@ export default function Layer2Page() {
     }
   };
 
-  if (!loaded) return <p className="p-4 text-slate-500">Loading personal monitoring dashboard…</p>;
+  if (!loaded) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          eyebrow="Layer 02"
+          title="Personal Motor-Pattern Monitoring"
+          description="Within-person baseline and change detection. Nothing here is compared against other people — only against your own frozen reference."
+        />
+        <p className="text-sm text-muted">Loading personal monitoring dashboard…</p>
+      </div>
+    );
+  }
 
   if (!sessions.length && !isDemoActive) {
     return (
-      <div className="mx-auto max-w-4xl p-4">
-        <h1 className="text-2xl font-bold text-slate-900">Layer 2 — Personal Longitudinal Monitoring</h1>
-        <div className="mt-4">
-          <EmptyState
-            title="No sessions recorded yet"
-            body="Personal baseline monitoring requires capturing repeated typing sessions across days to establish your individual neuromotor rhythm."
-          />
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <PrimaryButton onClick={() => router.push("/test")}>Start First Typing Session</PrimaryButton>
-            <SecondaryButton onClick={handleToggleDemo}>
-              📊 Load Clinical Demo Profile (Preview Full Dashboard)
-            </SecondaryButton>
-          </div>
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          eyebrow="Layer 02"
+          title="Personal Motor-Pattern Monitoring"
+          description="Within-person baseline and change detection. Nothing here is compared against other people — only against your own frozen reference."
+        />
+        <EmptyState
+          title="No sessions recorded yet"
+          body="Personal baseline monitoring needs repeated typing sessions on different days before it can compare you with yourself. Until then it reports no baseline reference rather than guessing."
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <PrimaryButton onClick={() => router.push("/test")}>Start a typing session</PrimaryButton>
+          <SecondaryButton onClick={handleToggleDemo}>Demo profile</SecondaryButton>
         </div>
       </div>
     );
@@ -373,8 +394,8 @@ export default function Layer2Page() {
   const selectedOption = INDICATOR_OPTIONS.find((o) => o.key === selectedMetric) ?? INDICATOR_OPTIONS[0];
   const currentBaselineMedian = baselineStats?.[selectedMetric]?.median ?? null;
 
-  // Latest neuromotor values for the scorecard. Missing values stay null —
-  // the UI shows "—" rather than inventing a plausible-looking number.
+  // Latest values. Missing values stay null — the UI shows "—" rather than
+  // inventing a plausible-looking number.
   const latestSession = sessions[sessions.length - 1];
   const latestFeats = latestSession?.features ?? {};
   const num = (v: number | null | undefined): number | null =>
@@ -384,8 +405,8 @@ export default function Layer2Page() {
   const latestConsistency = num(latestFeats.session_consistency);
   const latestPauses = num(latestFeats.pause_frequency);
 
-  // Each scorecard metric is judged against the user's OWN frozen baseline
-  // with the same robust-z rule the backend engine uses. No global cutoff.
+  // Each metric is judged against the user's OWN frozen baseline with the
+  // same robust-z rule the backend engine uses. No global cutoff.
   const states = {
     ht: metricState(latestHt, baselineStats?.ht_mean),
     consistency: metricState(latestConsistency, baselineStats?.session_consistency),
@@ -396,218 +417,182 @@ export default function Layer2Page() {
     pauses: metricState(latestPauses, baselineStats?.pause_frequency),
   };
 
-  const stateDot = {
-    unknown: "bg-slate-300",
-    normal: "bg-emerald-500",
-    elevated: "bg-amber-500",
-  } as const;
-  const stateLabel = {
-    unknown: "No baseline reference",
-    normal: "Within personal range",
-    elevated: "Above personal range",
-  } as const;
-
-  // Determine clinical conclusion state
   const isBaselineEstablished = progress.status === "established" || isDemoActive;
-  const isDriftDetected =
-    isBaselineEstablished && Object.values(states).some((s) => s === "elevated");
+  const elevatedCount = Object.values(states).filter((s) => s === "elevated").length;
+  const isDriftDetected = isBaselineEstablished && elevatedCount > 0;
 
-  let conclusionBadge = { text: "CALIBRATING INDIVIDUAL BASELINE", color: "bg-blue-100 text-blue-800 border-blue-200" };
-  let conclusionHeadline = "Establishing Personal Motor Reference Profile";
-  let conclusionMessage = `Currently collected ${progress.sessions} of ${progress.required} qualifying sessions across ${progress.distinctDays} days. In Parkinson's clinical care, establishing a personalized baseline is essential to distinguish genuine neurological changes from personal typing habits, keyboard differences, or age.`;
+  // This block describes what was measured against what reference. It does
+  // not name a condition and does not recommend a diagnosis.
+  let headline = "Baseline still being built";
+  let message = `Collected ${progress.sessions} of ${progress.required} qualifying sessions across ${progress.distinctDays} of ${progress.requiredDays} distinct days. Layer 2 compares a session only against your own frozen reference, so no value is flagged until that reference exists.`;
 
-  if (isBaselineEstablished) {
-    if (isDriftDetected) {
-      conclusionBadge = { text: "ATTENTION: PERSISTENT DRIFT OBSERVED", color: "bg-amber-100 text-amber-900 border-amber-300" };
-      conclusionHeadline = "Persistent Divergence from Established Baseline";
-      conclusionMessage = "Recent monitoring sessions exhibit persistent elongation of key hold duration and elevated rhythm variability exceeding your frozen reference intervals. In Parkinson's motor assessment, sustained timing drift correlates with progressive fine-motor slowing. Recommendation: Export the Clinician Report and consult your neurologist for formal motor examination.";
-    } else {
-      conclusionBadge = { text: "STABLE NEUROMOTOR RHYTHM", color: "bg-emerald-100 text-emerald-900 border-emerald-300" };
-      conclusionHeadline = "No Progressive Motor Pattern Degradation";
-      conclusionMessage = "Fine-motor timing across your recent sessions aligns closely with your frozen personal baseline. Keystroke duration, bilateral symmetry, and pause frequency show no progressive bradykinesia drift or motor rhythm deterioration over the monitored period.";
-    }
+  if (isBaselineEstablished && isDriftDetected) {
+    headline = `${elevatedCount} of 4 latest values sit above your personal range`;
+    message =
+      "At least one reading in the latest session is more than two robust standard deviations from your own frozen baseline. That is a change relative to you and nothing more: it is not a clinical finding, and the same shift can follow fatigue, a different keyboard or a different time of day. The clinician report lays out the individual values so they can be reviewed in person.";
+  } else if (isBaselineEstablished) {
+    headline = "All four latest values sit within your personal range";
+    message =
+      "Every reading in the latest session falls inside your own frozen reference intervals. No value moved by more than two robust standard deviations from your baseline.";
   }
 
+  const latest = { ht: latestHt, consistency: latestConsistency, asym: latestAsym, pauses: latestPauses };
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4">
-      {/* Header and Action Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800">
-              LAYER 2 ENGINE
-            </span>
-            <span className="text-xs text-slate-500">Longitudinal Neuromotor Analysis</span>
-            {isDemoActive && (
-              <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-800">
-                Active Demo Dataset
-              </span>
-            )}
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Personal Motor-Pattern Monitoring</h1>
-          <p className="text-xs text-slate-600">
-            Within-person baseline and progressive fine-motor timing drift detection for clinical correlation.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <SecondaryButton onClick={handleToggleDemo}>
-            {isDemoActive ? "Reset to My Real Data" : "📊 Demo Profile"}
-          </SecondaryButton>
-          <SecondaryButton onClick={() => setShowEventForm(!showEventForm)}>
-            {showEventForm ? "Cancel Event" : "+ Record Treatment Event"}
-          </SecondaryButton>
-          <PrimaryButton onClick={handleOpenReport}>
-            Clinician Report View
-          </PrimaryButton>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow={isDemoActive ? "Layer 02 — demo profile" : "Layer 02"}
+        title="Personal Motor-Pattern Monitoring"
+        description="Within-person baseline and change detection. Every comparison is against your own frozen reference, never against other people."
+        actions={
+          <>
+            <SecondaryButton onClick={handleToggleDemo}>
+              {isDemoActive ? "Reset to my data" : "Demo profile"}
+            </SecondaryButton>
+            <SecondaryButton onClick={() => setShowEventForm(!showEventForm)}>
+              {showEventForm ? "Cancel Event" : "+ Record Treatment Event"}
+            </SecondaryButton>
+            <PrimaryButton onClick={handleOpenReport}>Clinician Report View</PrimaryButton>
+          </>
+        }
+      />
 
-      {/* ======================================================== */}
-      {/* CLINICAL CONCLUSION & PARKINSON'S BIOMARKER HERO CARD */}
-      {/* ======================================================== */}
-      <Card className="border-l-4 border-l-teal-600 bg-gradient-to-br from-white to-slate-50/70 p-5 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3">
+      {/* The reading: latest session against the personal reference */}
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-hair pb-3">
           <div>
-            <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${conclusionBadge.color}`}>
-              {conclusionBadge.text}
-            </span>
-            <h2 className="mt-1.5 text-lg font-bold text-slate-900">{conclusionHeadline}</h2>
+            <p className="label">Latest session against your reference</p>
+            <p className="mt-1.5 font-display text-lg font-semibold tracking-tight text-ink">{headline}</p>
           </div>
-          <div className="text-left sm:text-right">
-            <span className="text-xs text-slate-500 block">Monitoring Period</span>
-            <span className="text-xs font-semibold text-slate-800">
-              {progress.sessions} sessions · {progress.distinctDays} recording days
-            </span>
-          </div>
+          <StatusBadge status={isDemoActive ? "established" : progress.status} />
         </div>
 
-        <p className="mt-3 text-xs leading-relaxed text-slate-700">
-          {conclusionMessage}
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-soft">{message}</p>
+
+        <dl className="mt-4 flex flex-col">
+          <Readout
+            label="Hold time"
+            value={latest.ht === null ? "—" : latest.ht.toFixed(0)}
+            unit="ms"
+            hint="Bradykinesia index — average key hold duration"
+            state={<StateDot state={states.ht} />}
+          />
+          <Readout
+            label="Rhythm consistency"
+            value={latest.consistency === null ? "—" : latest.consistency.toFixed(2)}
+            unit="CV"
+            hint="Cadence variation — variability divided by mean"
+            state={<StateDot state={states.consistency} />}
+          />
+          <Readout
+            label="Bilateral symmetry"
+            value={latest.asym === null ? "—" : (Math.abs(latest.asym) * 100).toFixed(1)}
+            unit="%"
+            hint="Left versus right hand hold duration"
+            state={<StateDot state={states.asymmetry} />}
+          />
+          <Readout
+            label="Motor hesitation"
+            value={latest.pauses === null ? "—" : latest.pauses.toFixed(1)}
+            unit="/min"
+            hint="Pauses longer than 500 ms"
+            state={<StateDot state={states.pauses} />}
+          />
+        </dl>
+
+        <p className="mt-4 flex items-start gap-2 border-t border-hair pt-4 text-xs leading-relaxed text-muted">
+          <span className="mt-[5px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-signal" aria-hidden />
+          <span>
+            Flags mean &ldquo;outside your own range&rdquo;, measured with the same robust-z rule the backend
+            engine uses. They are not a diagnosis and not a severity score.
+          </span>
         </p>
+      </Card>
 
-        {/* 4-Metric Parkinson's Digital Biomarker Scorecard */}
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {/* Biomarker 1: Bradykinesia */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Bradykinesia Index</span>
-              <span className="text-xs">⏱️</span>
-            </div>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestHt === null ? "—" : latestHt.toFixed(0)} <span className="text-xs font-normal text-slate-500">ms HT</span></p>
-            <p className="text-[11px] text-slate-500">Hold Duration</p>
-            <div className="mt-2 flex items-center gap-1">
-              <span className={`inline-block h-2 w-2 rounded-full ${stateDot[states.ht]}`} />
-              <span className="text-[11px] font-medium text-slate-700">{stateLabel[states.ht]}</span>
+      {/* Baseline status */}
+      <Card>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="label">Baseline</p>
+            <h2 className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
+              Personal Baseline:{" "}
+              <span className="capitalize">{isDemoActive ? "established (demo)" : progress.status}</span>
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+              {progress.sessions} of {progress.required} qualifying sessions · {progress.distinctDays} of{" "}
+              {progress.requiredDays} distinct recording days
+              {progress.anchorDevice ? ` · anchor device ${progress.anchorDevice.slice(0, 12)}…` : ""}.
+            </p>
+          </div>
+          <div className="w-full shrink-0 sm:w-56">
+            <Meter value={progress.sessions} max={progress.required} caption="sessions" />
+            <div className="mt-3">
+              <Meter value={progress.distinctDays} max={progress.requiredDays} caption="recording days" />
             </div>
           </div>
-
-          {/* Biomarker 2: Rhythm Regularity */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Rhythm Steadiness</span>
-              <span className="text-xs">📈</span>
-            </div>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestConsistency === null ? "—" : latestConsistency.toFixed(2)} <span className="text-xs font-normal text-slate-500">CV</span></p>
-            <p className="text-[11px] text-slate-500">Cadence Variation</p>
-            <div className="mt-2 flex items-center gap-1">
-              <span className={`inline-block h-2 w-2 rounded-full ${stateDot[states.consistency]}`} />
-              <span className="text-[11px] font-medium text-slate-700">{stateLabel[states.consistency]}</span>
-            </div>
-          </div>
-
-          {/* Biomarker 3: Bilateral Symmetry */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Bilateral Symmetry</span>
-              <span className="text-xs">⚖️</span>
-            </div>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestAsym === null ? "—" : (Math.abs(latestAsym) * 100).toFixed(1)} <span className="text-xs font-normal text-slate-500">%</span></p>
-            <p className="text-[11px] text-slate-500">Left vs Right Delta</p>
-            <div className="mt-2 flex items-center gap-1">
-              <span className={`inline-block h-2 w-2 rounded-full ${stateDot[states.asymmetry]}`} />
-              <span className="text-[11px] font-medium text-slate-700">{stateLabel[states.asymmetry]}</span>
-            </div>
-          </div>
-
-          {/* Biomarker 4: Micro-Pauses */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Motor Hesitation</span>
-              <span className="text-xs">⏸️</span>
-            </div>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{latestPauses === null ? "—" : latestPauses.toFixed(1)} <span className="text-xs font-normal text-slate-500">/min</span></p>
-            <p className="text-[11px] text-slate-500">Pauses &gt; 500ms</p>
-            <div className="mt-2 flex items-center gap-1">
-              <span className={`inline-block h-2 w-2 rounded-full ${stateDot[states.pauses]}`} />
-              <span className="text-[11px] font-medium text-slate-700">{stateLabel[states.pauses]}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Clinical Neurologist Interpretation Box */}
-        <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/50 p-3 text-xs text-teal-900">
-          <p>
-            <strong>Neurology Context:</strong> Parkinson&apos;s disease motor impairment typically manifests as gradual prolongation of finger release latency (bradykinesia), asymmetric finger tapping velocity, and irregular rhythm cadence. Unlike one-off tests, this longitudinal Layer 2 tracker enables clinicians to correlate motor drift with disease progression or Levodopa ON/OFF wearing-off cycles.
-          </p>
         </div>
       </Card>
 
       {/* Record Treatment Event Form */}
       {showEventForm && (
-        <Card className="border-teal-200 bg-teal-50/30">
-          <h3 className="font-semibold text-slate-900">Record Clinician-Directed Treatment Event</h3>
-          <p className="text-xs text-slate-600">
-            Log an event (e.g., medication change or therapy adjustment) to track keystroke timing before and after.
-            Does not infer clinical effectiveness.
+        <Card className="border-trace/30 bg-trace-wash/40">
+          <h2 className="font-display text-base font-semibold tracking-tight text-ink">
+            Record Clinician-Directed Treatment Event
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-soft">
+            Log an event (for example a medication change or a therapy adjustment) so keystroke timing before
+            and after can be compared. Does not infer clinical effectiveness.
           </p>
-          <form onSubmit={handleCreateEvent} className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-slate-700">Event Date</label>
+          <form onSubmit={handleCreateEvent} className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[13px] font-semibold tracking-tight text-ink">Event Date</span>
               <input
                 type="date"
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-slate-300 p-1.5 text-xs"
+                className="mt-1.5 w-full rounded-md border border-hair bg-paper px-3 py-2 text-sm text-ink focus:border-trace"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700">Event Type</label>
+            </label>
+            <label className="block">
+              <span className="text-[13px] font-semibold tracking-tight text-ink">Event Type</span>
               <select
                 value={eventType}
                 onChange={(e) => setEventType(e.target.value)}
-                className="mt-1 w-full rounded border border-slate-300 p-1.5 text-xs"
+                className="mt-1.5 w-full rounded-md border border-hair bg-paper px-3 py-2 text-sm text-ink focus:border-trace"
               >
                 <option value="medication_change">Medication Change</option>
                 <option value="dosage_adjustment">Dosage Adjustment</option>
                 <option value="therapy_start">Therapy / Exercise Start</option>
                 <option value="other">Other Clinical Event</option>
               </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-700">Description</label>
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="text-[13px] font-semibold tracking-tight text-ink">Description</span>
               <input
                 type="text"
                 placeholder="e.g. Started Levodopa 100mg BID with Dr. Smith"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-slate-300 p-1.5 text-xs"
+                className="mt-1.5 w-full rounded-md border border-hair bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-trace"
               />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-700">Clinical Notes (Optional)</label>
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="text-[13px] font-semibold tracking-tight text-ink">
+                Clinical Notes (optional)
+              </span>
               <input
                 type="text"
                 placeholder="e.g. Monitoring morning stiffness"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="mt-1 w-full rounded border border-slate-300 p-1.5 text-xs"
+                className="mt-1.5 w-full rounded-md border border-hair bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-trace"
               />
-            </div>
-            <div className="sm:col-span-2 flex justify-end gap-2">
+            </label>
+            <div className="flex justify-end gap-2 sm:col-span-2">
               <SecondaryButton onClick={() => setShowEventForm(false)}>Cancel</SecondaryButton>
-              <PrimaryButton disabled={submittingEvent}>
+              <PrimaryButton type="submit" disabled={submittingEvent}>
                 {submittingEvent ? "Saving…" : "Save Event"}
               </PrimaryButton>
             </div>
@@ -615,47 +600,21 @@ export default function Layer2Page() {
         </Card>
       )}
 
-      {/* Baseline Status Card */}
-      <Card>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <StatusBadge status={isDemoActive ? "established" : progress.status} />
-            <div>
-              <h3 className="font-semibold text-slate-900">
-                Personal Baseline: <span className="capitalize">{isDemoActive ? "established (demo)" : progress.status}</span>
-              </h3>
-              <p className="text-xs text-slate-600">
-                {progress.sessions} of {progress.required} qualifying sessions · {progress.distinctDays} of{" "}
-                {progress.requiredDays} distinct recording days
-                {progress.anchorDevice ? ` · Anchor: ${progress.anchorDevice.slice(0, 12)}…` : ""}.
-              </p>
-            </div>
+      {/* Indicator trend */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="font-display text-base font-semibold tracking-tight text-ink">
+              Indicator longitudinal trends
+            </h2>
+            <p className="mt-1 text-sm text-ink-soft">{selectedOption.desc}</p>
           </div>
-          <div className="text-right text-xs text-slate-500">
-            {isBaselineEstablished ? (
-              <span className="rounded bg-emerald-100 px-2 py-1 font-medium text-emerald-800">
-                Frozen Reference Active
-              </span>
-            ) : (
-              <span className="rounded bg-amber-100 px-2 py-1 font-medium text-amber-800">
-                Building Baseline (Keep Typing)
-              </span>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Interactive Feature-Level Trend Chart */}
-      <div className="space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-base font-bold text-slate-900">Indicator Longitudinal Trends</h2>
-          {/* Indicator Dropdown Selector */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-600">Select Indicator:</label>
+          <label className="flex items-center gap-2">
+            <span className="label">Indicator</span>
             <select
               value={selectedMetric}
               onChange={(e) => setSelectedMetric(e.target.value)}
-              className="rounded border border-slate-300 bg-white p-1 text-xs text-slate-800 focus:border-teal-500 focus:outline-none"
+              className="rounded-md border border-hair bg-paper px-3 py-2 text-sm text-ink focus:border-trace"
             >
               {INDICATOR_OPTIONS.map((opt) => (
                 <option key={opt.key} value={opt.key}>
@@ -663,7 +622,7 @@ export default function Layer2Page() {
                 </option>
               ))}
             </select>
-          </div>
+          </label>
         </div>
 
         <LongitudinalChart
@@ -672,98 +631,106 @@ export default function Layer2Page() {
           title={selectedOption.label}
           baselineMedian={currentBaselineMedian}
         />
-        <p className="text-xs text-slate-500 italic">{selectedOption.desc}</p>
       </div>
 
-      {/* Treatment-Event Timeline Comparison */}
+      {/* Treatment-Event comparison */}
       {comparisons.length > 0 && (
         <Card>
-          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hair pb-3">
             <div>
-              <h3 className="font-semibold text-slate-900">Treatment Timeline Observations</h3>
-              <p className="text-xs text-slate-500">
-                Pre-event vs post-event keystroke timing medians.
+              <h2 className="font-display text-base font-semibold tracking-tight text-ink">
+                Treatment timeline observations
+              </h2>
+              <p className="mt-1 text-sm text-ink-soft">
+                Pre-event versus post-event keystroke timing medians.
               </p>
             </div>
-            <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-              {treatmentEvents.length} event(s) recorded
-            </span>
+            <span className="label">{treatmentEvents.length} event(s) recorded</span>
           </div>
 
-          <div className="mt-3 space-y-4">
+          <div className="mt-4 flex flex-col gap-4">
             {comparisons.map((c) => (
-              <div key={c.event_id} className="rounded-lg border border-slate-100 bg-slate-50/50 p-3 text-xs">
-                <div className="flex items-center justify-between font-medium text-slate-800">
-                  <span className="font-bold">{c.description}</span>
-                  <span className="text-slate-500">{c.event_date.slice(0, 10)}</span>
+              <div key={c.event_id} className="rounded-lg border border-hair bg-canvas/60 p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-sm font-semibold text-ink">{c.description}</span>
+                  <span className="font-mono text-xs tabular-nums text-muted">
+                    {c.event_date.slice(0, 10)}
+                  </span>
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-xs text-muted">
                   Pre-event sessions: {c.pre_session_count} · Post-event sessions: {c.post_session_count}
                 </p>
 
-                <div className="mt-2 overflow-x-auto">
-                  <table className="w-full text-left">
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 text-slate-500">
-                        <th className="py-1">Indicator</th>
-                        <th className="py-1">Pre Median</th>
-                        <th className="py-1">Post Median</th>
-                        <th className="py-1">Difference</th>
+                      <tr className="border-b border-hair">
+                        <th className="label py-1.5 font-normal">Indicator</th>
+                        <th className="label py-1.5 font-normal">Pre median</th>
+                        <th className="label py-1.5 font-normal">Post median</th>
+                        <th className="label py-1.5 font-normal">Difference</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody>
                       {c.feature_comparisons.slice(0, 4).map((fc) => (
-                        <tr key={fc.feature}>
-                          <td className="py-1 text-slate-700">{fc.human_name}</td>
-                          <td className="py-1">{fc.pre_median?.toFixed(1) ?? "—"}</td>
-                          <td className="py-1">{fc.post_median?.toFixed(1) ?? "—"}</td>
-                          <td className="py-1 font-medium">
-                            {fc.difference != null ? `${fc.difference > 0 ? "+" : ""}${fc.difference} (${fc.percent_change}%)` : "—"}
+                        <tr key={fc.feature} className="border-b border-hair last:border-b-0">
+                          <td className="py-1.5 text-ink-soft">{fc.human_name}</td>
+                          <td className="py-1.5 font-mono tabular-nums text-ink">
+                            {fc.pre_median?.toFixed(1) ?? "—"}
+                          </td>
+                          <td className="py-1.5 font-mono tabular-nums text-ink">
+                            {fc.post_median?.toFixed(1) ?? "—"}
+                          </td>
+                          <td className="py-1.5 font-mono tabular-nums text-ink-soft">
+                            {fc.difference != null
+                              ? `${fc.difference > 0 ? "+" : ""}${fc.difference} (${fc.percent_change}%)`
+                              : "—"}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <p className="mt-2 text-[10px] text-amber-800 italic">{c.disclaimer}</p>
+                <p className="mt-2 text-xs italic text-muted">{c.disclaimer}</p>
               </div>
             ))}
           </div>
         </Card>
       )}
 
-      {/* Session History */}
+      {/* Session history */}
       <Card>
-        <h3 className="font-semibold text-slate-900">Recorded Sessions History</h3>
-        <p className="text-xs text-slate-500">
-          Showing {sessions.length} persisted session(s). Click any session to inspect exact within-session series.
+        <h2 className="font-display text-base font-semibold tracking-tight text-ink">
+          Recorded sessions
+        </h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Showing {sessions.length} persisted session(s). Open any session to inspect its exact
+          within-session series.
         </p>
-        <ul className="mt-3 divide-y divide-slate-100 text-xs">
+        <ul className="mt-3">
           {[...sessions].reverse().slice(0, 15).map((s) => (
-            <li key={s.id} className="flex items-center justify-between py-2">
-              <div>
-                <a className="font-medium text-teal-700 hover:underline" href={`/session/${s.id}`}>
-                  {s.started_at.slice(0, 16).replace("T", " ")}
-                </a>
-                <span className="ml-2 text-slate-500">· {s.session_type}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-400">device {s.device_id.slice(0, 8)}…</span>
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
-                  {(s.quality_flags ?? []).join(", ") || "validated"}
+            <li key={s.id} className="border-b border-hair last:border-b-0">
+              <a
+                href={`/session/${s.id}`}
+                className="flex flex-col gap-1 py-2.5 transition-colors hover:bg-canvas sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span>
+                  <span className="font-mono text-[13px] tabular-nums text-ink">
+                    {s.started_at.slice(0, 16).replace("T", " ")}
+                  </span>
+                  <span className="label ml-3">{s.session_type}</span>
                 </span>
-              </div>
+                <span className="flex items-center gap-3">
+                  <span className="font-mono text-[11px] text-muted">device {s.device_id.slice(0, 8)}…</span>
+                  <span className="label">{(s.quality_flags ?? []).join(", ") || "validated"}</span>
+                </span>
+              </a>
             </li>
           ))}
         </ul>
       </Card>
 
-      {/* Clinician Report Modal */}
-      <ClinicianReportModal
-        report={report}
-        isOpen={showReport}
-        onClose={() => setShowReport(false)}
-      />
+      <ClinicianReportModal report={report} isOpen={showReport} onClose={() => setShowReport(false)} />
     </div>
   );
 }

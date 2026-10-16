@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, PrimaryButton, SecondaryButton, StatusBadge } from "@/components/ui";
+import { Card, PageHeader, PrimaryButton, Readout, SecondaryButton, StatusBadge } from "@/components/ui";
+import { Trace } from "@/components/Trace";
 import { PinInputModal } from "@/components/PinInputModal";
 import { PinSetupModal } from "@/components/PinSetupModal";
 import { useTypingCapture } from "@/hooks/useTypingCapture";
@@ -22,9 +23,20 @@ const PROMPTS = [
 const MIN_SECONDS = 30;
 const MIN_KEYS = 50;
 
+/** Live axis: the bars must reflect this typist's actual milliseconds, so
+ *  the domain is derived from their own captured pairs, not the sample. */
+function liveDomain(hold: number[], flight: number[]): [number, number] {
+  const all = [...hold, ...flight].filter((v) => Number.isFinite(v) && v > 0);
+  if (!all.length) return [0, 200];
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const pad = Math.max(8, (max - min) * 0.15);
+  return [Math.max(0, min - pad), max + pad];
+}
+
 export default function TypingTestPage() {
   const router = useRouter();
-  const { active, count, start, stop } = useTypingCapture();
+  const { active, count, start, stop, getPairs } = useTypingCapture();
   const [prompt, setPrompt] = useState(PROMPTS[0]);
 
   useEffect(() => {
@@ -40,7 +52,6 @@ export default function TypingTestPage() {
   const [completedSessionId, setCompletedSessionId] = useState<string>("");
   const [elapsed, setElapsed] = useState(0);
 
-  // 4-Digit Daily Session PIN Security State
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
   const [pinVerified, setPinVerified] = useState(false);
@@ -80,7 +91,6 @@ export default function TypingTestPage() {
       begin();
       return;
     }
-
     const hasPin = await fetchPinStatus();
     if (!hasPin) {
       setIsSetupModalOpen(true);
@@ -116,7 +126,7 @@ export default function TypingTestPage() {
     setPreview(features);
 
     if (!isApiConfigured) {
-      setError("Analysis service not configured — showing on-device preview only.");
+      setError("Analysis service not configured — showing the on-device preview only.");
       saveSnapshot({
         sessionId: sessionIdRef.current,
         startedAt: startedAt!,
@@ -180,79 +190,124 @@ export default function TypingTestPage() {
       router.push(`/session/${sessionIdRef.current}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed");
-      void quality;
     } finally {
       setBusy(false);
+      void quality;
     }
   };
 
+  const recent = getPairs().slice(-30);
+  const liveHold = recent.map((p) => p.hold);
+  const liveFlight = recent.map((p) => p.flight);
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Typing session</h1>
-        <button
-          type="button"
-          onClick={() => setIsSetupModalOpen(true)}
-          className="text-xs text-slate-500 hover:text-teal-700 font-medium"
-        >
-          ⚙️ Change Session PIN
-        </button>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        eyebrow="Measurement"
+        title="Typing session"
+        description={`Type the prompt below at your normal pace. This is a real measured session — timing is recorded, the text is discarded. A valid session needs at least ${MIN_SECONDS} seconds and ${MIN_KEYS} keystrokes.`}
+        actions={
+          <button
+            type="button"
+            onClick={() => setIsSetupModalOpen(true)}
+            className="rounded-md border border-hair px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
+          >
+            Change session PIN
+          </button>
+        }
+      />
 
-      <p className="mt-1 text-sm text-slate-600">
-        Type the prompt naturally. This is a <strong>real measured session</strong> — timing only,
-        content is discarded. Minimum {MIN_SECONDS}s and {MIN_KEYS} keys for a valid session.
-      </p>
+      <Card className="mt-6">
+        <p className="label">Type this</p>
+        <p className="mt-2 text-[17px] leading-relaxed text-ink">{prompt}</p>
 
-      <Card className="mt-4">
-        <p className="rounded-xl bg-slate-100 p-4 font-serif text-lg leading-relaxed">{prompt}</p>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={!active}
           rows={4}
-          placeholder={active ? "Type here…" : "Press Start session (4-digit PIN required), then type here."}
-          className="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-teal-500 disabled:bg-slate-50"
+          placeholder={
+            active
+              ? "Type here…"
+              : "Press Start session (a 4-digit PIN is required), then type here."
+          }
+          className="mt-4 w-full rounded-md border border-hair bg-paper px-3 py-2.5 text-[15px] text-ink transition-colors placeholder:text-muted/70 focus:border-trace disabled:bg-canvas"
         />
-        <div className="mt-3 flex items-center gap-3">
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           {!active ? (
             <PrimaryButton onClick={handleStartSessionClick}>
-              {pinVerified ? "Start session" : "🔒 Unlock & Start session"}
+              {pinVerified ? "Start session" : "Unlock and start session"}
             </PrimaryButton>
           ) : (
             <PrimaryButton onClick={finish} disabled={busy}>
-              {busy ? "Analyzing…" : "Finish & analyze"}
+              {busy ? "Analysing…" : "Finish & analyze"}
             </PrimaryButton>
           )}
-          <span className="text-sm text-slate-600">
+          <span className="font-mono text-sm tabular-nums text-ink-soft">
             {count} keys · {elapsed.toFixed(0)}s
           </span>
+          {active && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-trace" aria-hidden />
+              <span className="label">recording</span>
+            </span>
+          )}
         </div>
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+
+        {error && (
+          <p className="mt-3 rounded-md border border-signal/35 bg-signal-wash px-3 py-2 text-xs text-[#8a5a06]">
+            {error}
+          </p>
+        )}
       </Card>
+
+      {/* The live trace: the same instrument as the landing page, now
+          drawing this session's own intervals as they are typed. */}
+      {active && liveHold.length >= 2 && (
+        <Card className="mt-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <span className="label">Your intervals as you type</span>
+            <span className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-[1px] bg-trace" aria-hidden />
+                <span className="label">hold</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="h-2.5 w-2.5 rounded-[1px] border border-trace/45 bg-trace-wash"
+                  aria-hidden
+                />
+                <span className="label">flight</span>
+              </span>
+            </span>
+          </div>
+          <Trace hold={liveHold} flight={liveFlight} domain={liveDomain(liveHold, liveFlight)} animate={false} height={96} />
+        </Card>
+      )}
 
       {preview && (
         <Card className="mt-4">
-          <h2 className="font-semibold">
-            On-device preview <StatusBadge status="preview" />
-          </h2>
-          <dl className="mt-2 grid grid-cols-2 gap-1 text-sm">
-            <dt>Hold time</dt>
-            <dd>{preview.ht_mean?.toFixed(0) ?? "—"} ms</dd>
-            <dt>Flight time</dt>
-            <dd>{preview.ft_mean?.toFixed(0) ?? "—"} ms</dd>
-            <dt>Inter-key latency</dt>
-            <dd>{preview.ikl_mean?.toFixed(0) ?? "—"} ms</dd>
-            <dt>Typing speed</dt>
-            <dd>{preview.typing_speed?.toFixed(2) ?? "—"} keys/s</dd>
+          <div className="flex items-center justify-between gap-3 border-b border-hair pb-3">
+            <h2 className="label">On-device preview</h2>
+            <StatusBadge status="preview" />
+          </div>
+          <dl className="mt-3 flex flex-col">
+            <Readout label="Hold time" value={preview.ht_mean?.toFixed(0) ?? "—"} unit="ms" />
+            <Readout label="Flight time" value={preview.ft_mean?.toFixed(0) ?? "—"} unit="ms" />
+            <Readout label="Inter-key latency" value={preview.ikl_mean?.toFixed(0) ?? "—"} unit="ms" />
+            <Readout
+              label="Typing speed"
+              value={preview.typing_speed?.toFixed(2) ?? "—"}
+              unit="keys/s"
+            />
           </dl>
-          <div className="mt-3">
+          <div className="mt-4">
             <SecondaryButton href={`/session/${completedSessionId}`}>Open session insight</SecondaryButton>
           </div>
         </Card>
       )}
 
-      {/* 4-Digit PIN Verification Modal */}
       <PinInputModal
         isOpen={isPinModalOpen}
         onSuccess={handlePinSuccess}
@@ -263,7 +318,6 @@ export default function TypingTestPage() {
         onCancel={() => setIsPinModalOpen(false)}
       />
 
-      {/* 4-Digit PIN Setup Modal */}
       <PinSetupModal
         isOpen={isSetupModalOpen}
         onSuccess={handleSetupSuccess}
