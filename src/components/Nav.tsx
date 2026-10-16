@@ -65,7 +65,9 @@ export function TopBar() {
             </nav>
           )}
 
-          {!signedIn && status === "signed-out" && (
+          {/* The landing page carries its own auth panel, so repeating the
+              two actions in the header would just duplicate them. */}
+          {!signedIn && status === "signed-out" && pathname !== "/" && (
             <nav className="flex items-center gap-1" aria-label="Account">
               <Link
                 href="/login"
