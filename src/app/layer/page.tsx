@@ -39,7 +39,11 @@ export default function LayerSelectionPage() {
   const choose = async (layer: Layer) => {
     setLayer(layer);
     await markOnboardingComplete();
-    router.replace("/dashboard");
+    if (layer === "layer1") {
+      router.replace("/layer1");
+    } else {
+      router.replace("/layer2");
+    }
   };
 
   return (
