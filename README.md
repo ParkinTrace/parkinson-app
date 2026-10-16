@@ -3,7 +3,9 @@
 > **Privacy-First Digital Biomarker Platform for Neuromuscular Rhythm Screening & Longitudinal Monitoring**  
 > *Research Aid & Academic Capstone — Not an Autonomous Diagnostic Device.*
 
-ParkinTrace analyzes how you naturally type on a standard computer keyboard. By measuring the microsecond duration each key is held (**Hold Time**) and the transitions between keypresses (**Flight Time**), it detects subtle variations in motor fluidity without ever recording, storing, or reading the words you type.
+ParkinTrace is a privacy-first, zero-knowledge digital biomarker platform for motor fluctuation tracking. By analyzing micro-timing anomalies in routine typing rather than content, we turn standard laptop keyboards into non-invasive neuromuscular telemetry devices without recording a single letter the user types.
+
+By measuring the microsecond duration each key is held (**Hold Time**) and the transitions between keypresses (**Flight Time**), it detects subtle variations in motor fluidity without ever recording, storing, or reading the words you type.
 
 ---
 

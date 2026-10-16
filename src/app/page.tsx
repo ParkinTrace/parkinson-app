@@ -224,7 +224,7 @@ export default function LandingPage() {
             {/* Clear explanation of ParkinTrace */}
             <div className="space-y-2.5 font-sans text-xs sm:text-sm text-[#414846] leading-relaxed">
               <p>
-                <strong className="text-[#002620] font-semibold">What is ParkinTrace?</strong> A non-invasive digital screening tool that examines how you naturally type on a standard keyboard—measuring the microsecond duration each key is pressed and the brief pauses in between.
+                <strong className="text-[#002620] font-semibold">What is ParkinTrace?</strong> A privacy-first, zero-knowledge digital biomarker platform for motor fluctuation tracking. By analyzing micro-timing anomalies in routine typing rather than content, we turn standard laptop keyboards into non-invasive neuromuscular telemetry devices without recording a single letter the user types.
               </p>
               <p>
                 <strong className="text-[#002620] font-semibold">What are we trying to do?</strong> We help individuals and clinicians detect subtle changes in motor stability over time. By observing finger fluidity rather than physical movement, we identify early trends completely decoupled from content—nothing you write is ever captured, stored, or read.
