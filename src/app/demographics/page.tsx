@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Card, Field, OnboardingShell, PrimaryButton, inputCls } from "@/components/ui";
+import { Card, Field, OnboardingShell, PrimaryButton, SecondaryButton, inputCls } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 
 /** Context only. Typing experience never gates measurement and never
@@ -20,7 +20,7 @@ type Form = z.infer<typeof schema>;
 
 export default function DemographicsPage() {
   const router = useRouter();
-  const { register, handleSubmit } = useForm<Form>({ resolver: zodResolver(schema) });
+  const { register, handleSubmit, formState } = useForm<Form>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (v: Form) => {
     const supa = supabaseBrowser();
@@ -60,7 +60,7 @@ export default function DemographicsPage() {
     >
       <Card>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <Field label="Age (optional)">
+          <Field label="Age (optional)" error={formState.errors.age?.message}>
             <input className={inputCls} type="number" min={0} max={130} {...register("age")} />
           </Field>
 
@@ -96,13 +96,15 @@ export default function DemographicsPage() {
             </select>
           </Field>
 
-          <Field label="Year of diagnosis (optional)">
+          <Field label="Year of diagnosis (optional)" error={formState.errors.diagnosisYear?.message}>
             <input className={inputCls} type="number" min={1900} max={2100} {...register("diagnosisYear")} />
           </Field>
 
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <PrimaryButton type="submit">Continue</PrimaryButton>
-            <span className="text-xs text-muted">You can skip every field.</span>
+            <SecondaryButton type="button" onClick={() => router.push("/layer")}>
+              Skip for now
+            </SecondaryButton>
           </div>
         </form>
       </Card>

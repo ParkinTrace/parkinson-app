@@ -1,4 +1,22 @@
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap");
 @import "tailwindcss";
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
 
 /* ------------------------------------------------------------------
    ParkinTrace design tokens — "instrument, not app".
@@ -8,33 +26,37 @@
    actually matter to a reader: attention, and outside-personal-range.
    ------------------------------------------------------------------ */
 @theme {
-  /* Ink & surfaces */
-  --color-ink: #0d1b22;
-  --color-ink-soft: #35474f;
+  /* Stitch Ink, Forest & warm glass surfaces */
+  --color-ink: #131e1b;
+  --color-ink-soft: #283330;
   --color-muted: #5a6a72;
-  --color-canvas: #f1f4f3;
+  --color-canvas: #F7F5EF;
   --color-paper: #ffffff;
-  --color-hair: #dce3e2;
+  --color-hair: #d9e5e0;
+
+  /* Stitch Deep Clinical Forest & Pine */
+  --color-primary: #002620;
+  --color-primary-container: #183c35;
+  --color-secondary: #486455;
+  --color-secondary-container: #c7e7d4;
+  --color-secondary-fixed: #caead7;
 
   /* The measurement */
   --color-trace: #0e7c66;
   --color-trace-deep: #0a5f4e;
   --color-trace-wash: #e6f1ee;
 
-  /* Attention, outside personal range, and genuine problems */
+  /* Attention, outside personal range, and alerts */
   --color-signal: #e4a11b;
   --color-signal-wash: #fdf3e0;
   --color-alert: #b4442f;
   --color-alert-wash: #fbeeeb;
 
-  /* Type roles: a condensed engineering grotesque for headings, a
-     plain readable sans for prose, and monospace for every number. */
-  --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Type roles */
+  --font-display: var(--font-jakarta), var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
 
-  /* A rejected PIN is the one place motion earns its keep: it says
-     "wrong" without adding a second error box to read. */
   --animate-shake: shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
@@ -63,12 +85,12 @@
   :focus-visible {
     outline: 2px solid var(--color-trace);
     outline-offset: 2px;
-    border-radius: 3px;
+    border-radius: 4px;
   }
 
   ::selection {
-    background-color: var(--color-trace);
-    color: #ffffff;
+    background-color: var(--color-secondary-fixed);
+    color: var(--color-primary);
   }
 
   /* Numbers are the product: always tabular, never bouncy. */
@@ -78,8 +100,62 @@
 }
 
 @layer components {
-  /* Small-caps instrument label. Used for every eyebrow, unit and axis
-     caption so the data reads like a panel legend, not like prose. */
+  /* Stitch Warm Glassmorphism Refinement */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: inset 0 1px 2px 0 rgba(255, 255, 255, 0.95), 0 16px 40px -8px rgba(24, 60, 53, 0.06);
+  }
+
+  .glass-pill {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(28px) saturate(200%);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 20px 40px -8px rgba(16, 43, 39, 0.08), 0 6px 16px -4px rgba(16, 43, 39, 0.04), inset 0 1px 1px 0 rgba(255, 255, 255, 1);
+  }
+
+  .glass-substrate {
+    background: rgba(255, 255, 255, 0.76);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 12px 32px -4px rgba(19, 42, 38, 0.04);
+  }
+
+  .glass-card-subtle {
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 8px 24px -4px rgba(19, 42, 38, 0.03);
+  }
+
+  .glass-vitrine {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(28px) saturate(200%);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 20px 48px -12px rgba(16, 43, 39, 0.07), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  .glass-specular {
+    box-shadow: 0 20px 48px -12px rgba(13, 59, 54, 0.06), 0 1px 2px 0 rgba(255, 255, 255, 0.9) inset;
+  }
+
+  .recessed-telemetry {
+    background: rgba(233, 229, 219, 0.4);
+    border: 1px solid rgba(193, 200, 197, 0.5);
+    box-shadow: inset 0 2px 4px 0 rgba(16, 43, 39, 0.04);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Small-caps instrument label. */
   .label {
     font-family: var(--font-mono);
     font-size: 0.6875rem;

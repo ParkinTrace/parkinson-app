@@ -18,9 +18,21 @@ export function stableDeviceId(): string {
 }
 
 async function api(path: string, body: unknown) {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  const supa = supabaseBrowser();
+  if (supa) {
+    try {
+      const { data } = await supa.auth.getSession();
+      if (data?.session?.access_token) {
+        headers["authorization"] = `Bearer ${data.session.access_token}`;
+      }
+    } catch {
+      // Fallback
+    }
+  }
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -56,6 +68,7 @@ export async function persistAndAnalyze(
         ended_at: payload.endedAt,
         session_type: payload.sessionType,
         device_id: payload.deviceId,
+        device_metadata: { layer: payload.layer ?? "layer2" },
         valid: true,
         quality_flags: payload.qualityFlags,
       },
@@ -103,22 +116,21 @@ export async function claimLocalSessions(): Promise<number> {
   if (!data.user) return 0;
 
   const claimed: string[] = [];
-  for (const payload of pending) {
+  // Only claim Layer 2 sessions; Layer 1 is strictly a sample screening test
+  const eligible = pending.filter((p) => p.layer !== "layer1");
+  for (const payload of eligible) {
     try {
-      // Re-runs the canonical path with the same session id, so the row, the
-      // metrics and the Layer 1 result all land under this account exactly as
-      // if the session had been measured while signed in.
       await persistAndAnalyze(payload);
       claimed.push(payload.sessionId);
     } catch {
-      // Best effort: stop and keep the rest pending for the next sign-in.
-      // A Layer 1 session must never block reaching the dashboard.
       break;
     }
   }
 
-  if (claimed.length) {
-    clearPending(claimed);
+  // Also clear any accidental pending layer1 items so they don't linger
+  const allToClear = [...claimed, ...pending.filter((p) => p.layer === "layer1").map((p) => p.sessionId)];
+  if (allToClear.length) {
+    clearPending(allToClear);
     forgetLocalHistory(claimed);
   }
   return claimed.length;
@@ -135,7 +147,9 @@ export async function fetchSessionExact(sessionId: string): Promise<{ session: S
   if (error) throw new Error(`Session fetch failed: ${error.message}`);
   if (!row) throw new SessionNotFoundError(sessionId);
   const { data: metrics } = await supa.from("session_metrics").select("*").eq("session_id", sessionId).limit(1).maybeSingle();
-  return { session: row as SessionRow, metrics };
+  const meta = (row.device_metadata as Record<string, unknown> | null) ?? {};
+  const layer = (meta.layer as "layer1" | "layer2" | undefined) ?? (row.layer as "layer1" | "layer2" | undefined) ?? (row.session_type === "motor_task" ? "layer2" : undefined);
+  return { session: { ...row, layer } as SessionRow, metrics };
 }
 
 export async function fetchHistory(limit = 200): Promise<SessionRow[]> {
@@ -149,7 +163,17 @@ export async function fetchHistory(limit = 200): Promise<SessionRow[]> {
         .eq("user_id", auth.user.id)
         .order("started_at", { ascending: true })
         .limit(limit);
-      return (data ?? []) as SessionRow[];
+      return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+        const meta = (r.device_metadata as Record<string, unknown> | null) ?? {};
+        const layer =
+          (meta.layer as "layer1" | "layer2" | undefined) ??
+          (r.layer as "layer1" | "layer2" | undefined) ??
+          (r.session_type === "motor_task" ? "layer2" : undefined);
+        return {
+          ...r,
+          layer,
+        } as SessionRow;
+      });
     }
   }
   // Local storage fallback for offline / test environments
@@ -157,7 +181,18 @@ export async function fetchHistory(limit = 200): Promise<SessionRow[]> {
     try {
       const local = localStorage.getItem("parkintrace_local_history");
       if (local) {
-        return JSON.parse(local) as SessionRow[];
+        const parsed = JSON.parse(local) as Array<Record<string, unknown>>;
+        return parsed.map((r) => {
+          const meta = (r.device_metadata as Record<string, unknown> | null) ?? {};
+          const layer =
+            (r.layer as "layer1" | "layer2" | undefined) ??
+            (meta.layer as "layer1" | "layer2" | undefined) ??
+            (r.session_type === "motor_task" ? "layer2" : undefined);
+          return {
+            ...r,
+            layer,
+          } as SessionRow;
+        });
       }
     } catch {}
   }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isSessionUnlocked,
   lockSession,
@@ -12,6 +12,7 @@ describe("4-digit session PIN frontend client", () => {
     // Clear storage before each test
     sessionStorage.clear();
     localStorage.clear();
+    vi.restoreAllMocks();
   });
 
   it("manages session unlock token lifecycle correctly", () => {
@@ -44,6 +45,9 @@ describe("4-digit session PIN frontend client", () => {
   });
 
   it("supports offline dev fallback for setup and verification", async () => {
+    // Force offline condition to explicitly test the client-side fallback storage
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network offline"));
+
     const userId = "test-frontend-user";
 
     // Setup 4-digit PIN

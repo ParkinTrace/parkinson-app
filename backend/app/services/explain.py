@@ -12,17 +12,30 @@ import numpy as np
 import pandas as pd
 
 _SERVICES_DIR = os.path.dirname(os.path.abspath(__file__))
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_SERVICES_DIR)))
+_APP_DIR = os.path.dirname(_SERVICES_DIR)
+_REPO_ROOT = os.path.dirname(os.path.dirname(_SERVICES_DIR))
+
+LOCAL_ARTIFACT = os.path.join(_APP_DIR, "artifacts", "model_full.joblib")
+LOCAL_SCALER = os.path.join(_APP_DIR, "artifacts", "live_scaler.json")
+LOCAL_CSV = os.path.join(_APP_DIR, "artifacts", "harmonized_sessions_cleaned.csv")
+
 LEGACY_ARTIFACT = os.path.join(
     _REPO_ROOT, "functions", "models", "experiments", "rf", "model_full.joblib")
 LEGACY_SCALER = os.path.join(
     _REPO_ROOT, "functions", "models", "experiments", "rf", "live_scaler.json")
+LEGACY_CSV = os.path.join(
+    _REPO_ROOT, "functions", "data", "harmonized", "harmonized_sessions_cleaned.csv" if os.path.exists(
+        os.path.join(_REPO_ROOT, "functions", "data", "harmonized", "harmonized_sessions_cleaned.csv")
+    ) else os.path.join(_REPO_ROOT, "functions", "data", "harmonized", "harmonized_sessions.csv")
+)
 
-ARTIFACT = os.environ.get("PARKINTRACE_RF_ARTIFACT", LEGACY_ARTIFACT)
-LIVE_SCALER = os.environ.get("PARKINTRACE_RF_SCALER", LEGACY_SCALER)
-HARMONIZED_CSV = os.environ.get(
-    "PARKINTRACE_HARMONIZED_CSV",
-    os.path.join(_REPO_ROOT, "functions", "data", "harmonized", "harmonized_sessions.csv"))
+DEFAULT_ARTIFACT = LOCAL_ARTIFACT if os.path.exists(LOCAL_ARTIFACT) else LEGACY_ARTIFACT
+DEFAULT_SCALER = LOCAL_SCALER if os.path.exists(LOCAL_SCALER) else LEGACY_SCALER
+DEFAULT_CSV = LOCAL_CSV if os.path.exists(LOCAL_CSV) else LEGACY_CSV
+
+ARTIFACT = os.environ.get("PARKINTRACE_RF_ARTIFACT", DEFAULT_ARTIFACT)
+LIVE_SCALER = os.environ.get("PARKINTRACE_RF_SCALER", DEFAULT_SCALER)
+HARMONIZED_CSV = os.environ.get("PARKINTRACE_HARMONIZED_CSV", DEFAULT_CSV)
 
 N_BACKGROUND = 100
 TOP_K = 3

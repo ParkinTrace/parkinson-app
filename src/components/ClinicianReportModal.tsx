@@ -23,7 +23,15 @@ export function ClinicianReportModal({ report, isOpen, onClose }: Props) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="clinician-report-title"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm"
+    >
       <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border border-hair bg-paper p-7 shadow-xl print:max-h-none print:border-0 print:shadow-none">
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-hair pb-4">
@@ -32,7 +40,7 @@ export function ClinicianReportModal({ report, isOpen, onClose }: Props) {
               <span className="label">CLINICAL SUPERVISION SUMMARY</span>
               <span className="font-mono text-[11px] text-muted">ID: {report.report_id}</span>
             </div>
-            <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-ink">
+            <h2 id="clinician-report-title" className="mt-2 font-display text-2xl font-semibold tracking-tight text-ink">
               ParkTrace Longitudinal Motor-Pattern Report
             </h2>
             <p className="mt-1 text-xs text-muted">

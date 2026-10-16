@@ -26,15 +26,23 @@ from app.core.constants import (
 )
 
 _SERVICES_DIR = os.path.dirname(os.path.abspath(__file__))
+_APP_DIR = os.path.dirname(_SERVICES_DIR)
 # services -> app -> backend -> repo root
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_SERVICES_DIR)))
+_REPO_ROOT = os.path.dirname(os.path.dirname(_SERVICES_DIR))
+
+LOCAL_ARTIFACT = os.path.join(_APP_DIR, "artifacts", "model_full.joblib")
+LOCAL_SCALER = os.path.join(_APP_DIR, "artifacts", "live_scaler.json")
+
 LEGACY_ARTIFACT = os.path.join(
     _REPO_ROOT, "functions", "models", "experiments", "rf", "model_full.joblib")
 LEGACY_SCALER = os.path.join(
     _REPO_ROOT, "functions", "models", "experiments", "rf", "live_scaler.json")
 
-ARTIFACT = os.environ.get("PARKINTRACE_RF_ARTIFACT", LEGACY_ARTIFACT)
-LIVE_SCALER = os.environ.get("PARKINTRACE_RF_SCALER", LEGACY_SCALER)
+DEFAULT_ARTIFACT = LOCAL_ARTIFACT if os.path.exists(LOCAL_ARTIFACT) else LEGACY_ARTIFACT
+DEFAULT_SCALER = LOCAL_SCALER if os.path.exists(LOCAL_SCALER) else LEGACY_SCALER
+
+ARTIFACT = os.environ.get("PARKINTRACE_RF_ARTIFACT", DEFAULT_ARTIFACT)
+LIVE_SCALER = os.environ.get("PARKINTRACE_RF_SCALER", DEFAULT_SCALER)
 
 _bundle = None
 

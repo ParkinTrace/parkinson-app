@@ -9,6 +9,7 @@ export interface Snapshot {
   startedAt: string;
   endedAt: string;
   sessionType: string;
+  layer?: "layer1" | "layer2";
   deviceId: string;
   features: Record<string, number | null>;
   layer1: Record<string, unknown> | null;
@@ -30,7 +31,7 @@ export function saveSnapshot(s: Snapshot) {
     sessionStorage.setItem(key(s.sessionId), JSON.stringify(s));
     localStorage.setItem("parkintrace-last-session", s.sessionId);
 
-    // Maintain parkintrace_local_history for seamless offline/local Layer 2 longitudinal trends
+    // Maintain parkintrace_local_history with explicit layer distinction
     const historyKey = "parkintrace_local_history";
     const existingRaw = localStorage.getItem(historyKey);
     const history: Array<Record<string, unknown>> = existingRaw ? JSON.parse(existingRaw) : [];
@@ -41,6 +42,7 @@ export function saveSnapshot(s: Snapshot) {
         started_at: s.startedAt,
         ended_at: s.endedAt,
         session_type: s.sessionType,
+        layer: s.layer ?? (s.sessionType === "motor_task" ? "layer2" : "layer1"),
         device_id: s.deviceId,
         valid: true,
         quality_flags: [],
@@ -88,6 +90,9 @@ const PENDING_KEY = "parkintrace_pending_sessions";
 const PENDING_CAP = 20;
 
 export function savePending(payload: SessionPayload): void {
+  // Layer 1 is only a sample screening session and must NEVER be claimed into an account's baseline
+  if (payload.layer === "layer1") return;
+
   try {
     const raw = localStorage.getItem(PENDING_KEY);
     const list: SessionPayload[] = raw ? JSON.parse(raw) : [];

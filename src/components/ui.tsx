@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { DISCLAIMER } from "@/lib/config";
+import { BackButton } from "@/components/BackButton";
+export { BackButton };
 
 /* The wordmark is the trace, not a monogram — the product's output is
    its identity. Four bars: hold, flight, hold, flight. */
@@ -25,7 +28,7 @@ export function Logo({ size = 26 }: { size?: number }) {
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-lg border border-hair bg-paper p-5 shadow-[0_1px_2px_rgba(13,27,34,0.04)] ${className}`}
+      className={`rounded-2xl border border-white/60 bg-white/70 p-6 backdrop-blur-md shadow-[0_8px_32px_rgba(0,38,32,0.04)] ${className}`}
     >
       {children}
     </div>
@@ -49,12 +52,12 @@ export function PrimaryButton({
   href?: string;
   className?: string;
 }) {
-  const cls = `inline-block rounded-md bg-ink px-5 py-2.5 text-center text-sm font-semibold tracking-tight text-white transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-45 ${className}`;
+  const cls = `inline-flex items-center justify-center rounded-full bg-[#002620] px-6 py-2.5 text-center text-sm font-semibold tracking-tight text-white shadow-sm transition-all hover:bg-[#003830] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-45 ${className}`;
   if (href)
     return (
-      <a href={href} className={cls}>
+      <Link href={href} className={cls}>
         {children}
-      </a>
+      </Link>
     );
   return (
     <button type={type} disabled={disabled} onClick={onClick} className={cls}>
@@ -67,24 +70,26 @@ export function SecondaryButton({
   children,
   onClick,
   href,
+  type = "button",
   disabled = false,
   className = "",
 }: {
   children: ReactNode;
   onClick?: () => void;
   href?: string;
+  type?: "button" | "submit";
   disabled?: boolean;
   className?: string;
 }) {
-  const cls = `inline-block rounded-md border border-hair bg-paper px-5 py-2.5 text-center text-sm font-semibold tracking-tight text-ink transition-colors hover:border-ink/30 hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-45 ${className}`;
+  const cls = `inline-flex items-center justify-center rounded-full border border-[#c1c8c5]/40 bg-white/80 px-5 py-2.5 text-center text-sm font-semibold tracking-tight text-[#002620] backdrop-blur-sm transition-all hover:border-[#002620]/30 hover:bg-white disabled:cursor-not-allowed disabled:opacity-45 ${className}`;
   if (href)
     return (
-      <a href={href} className={cls}>
+      <Link href={href} className={cls}>
         {children}
-      </a>
+      </Link>
     );
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className={cls}>
+    <button type={type} disabled={disabled} onClick={onClick} className={cls}>
       {children}
     </button>
   );
@@ -149,7 +154,7 @@ export function Field({
 }
 
 export const inputCls =
-  "w-full rounded-md border border-hair bg-paper px-3 py-2 text-[15px] text-ink transition-colors placeholder:text-muted/70 focus:border-trace";
+  "w-full rounded-xl border border-[#c1c8c5]/50 bg-white/90 px-3.5 py-2.5 text-[15px] text-[#002620] shadow-sm transition-all placeholder:text-[#486455]/50 focus:border-[#002620] focus:outline-none focus:ring-2 focus:ring-[#002620]/10";
 
 /* ------------------------------------------------------------------ */
 /* Instrument furniture                                                */
@@ -171,15 +176,19 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="border-b border-hair pb-5">
+    <header className="border-b border-[#c1c8c5]/25 pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          {eyebrow && <p className="label">{eyebrow}</p>}
-          <h1 className="mt-2 font-display text-[26px] font-semibold leading-tight tracking-tight text-ink">
+          {eyebrow && (
+            <span className="inline-block rounded-full bg-[#002620]/5 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-[#002620]">
+              {eyebrow}
+            </span>
+          )}
+          <h1 className="mt-2.5 font-display text-2xl sm:text-3xl font-semibold leading-tight tracking-tight text-[#002620]">
             {title}
           </h1>
           {description && (
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">{description}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#486455]">{description}</p>
           )}
         </div>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -280,6 +289,9 @@ export function OnboardingShell({
 }) {
   return (
     <div className="mx-auto max-w-xl">
+      <div className="mb-4">
+        <BackButton fallbackHref="/" />
+      </div>
       <ol className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Setup progress">
         {steps.map((s, i) => {
           const n = i + 1;

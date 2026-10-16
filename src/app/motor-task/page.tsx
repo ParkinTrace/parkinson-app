@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, PageHeader, PrimaryButton } from "@/components/ui";
+import { Card, PageHeader, PrimaryButton, SecondaryButton } from "@/components/ui";
 import { PinInputModal } from "@/components/PinInputModal";
 import { PinSetupModal } from "@/components/PinSetupModal";
 import { useMotorTaskCapture } from "@/hooks/useTypingCapture";
@@ -11,12 +11,37 @@ import { saveSnapshot } from "@/lib/localCache";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { isApiConfigured } from "@/lib/config";
 import { fetchPinStatus, isSessionUnlocked, lockSession } from "@/lib/pinClient";
+import { pinRequired } from "@/lib/pinPolicy";
+import { useSession } from "@/lib/useSession";
+import { useAppStore } from "@/store/useAppStore";
 import type { SessionPayload } from "@/lib/types";
 
 const DURATION_MS = 15_000;
 
 /** F/J alternating tap task, 15 s. Own recorder + own feature path —
  *  never mixed into typing HT/FT/IKL statistics. */
+function playCompletionTone() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch {
+    // AudioContext blocked or unsupported
+  }
+}
+
 export default function MotorTaskPage() {
   const router = useRouter();
   const { active, taps, remaining, start, getTaps } = useMotorTaskCapture(DURATION_MS);
@@ -29,6 +54,14 @@ export default function MotorTaskPage() {
   const [pinVerified, setPinVerified] = useState(false);
 
   const sessionIdRef = useRef<string>(newSessionId());
+  const prevActiveRef = useRef(false);
+
+  useEffect(() => {
+    if (prevActiveRef.current && !active && startedAt) {
+      playCompletionTone();
+    }
+    prevActiveRef.current = active;
+  }, [active, startedAt]);
 
   useEffect(() => {
     // Client-only read of sessionStorage; server HTML cannot know this.
@@ -43,8 +76,18 @@ export default function MotorTaskPage() {
     start();
   };
 
+  const handleResetTask = () => {
+    setStartedAt(null);
+    setError("");
+  };
+
+  const layer = useAppStore((s) => s.layer);
+  const status = useSession();
+  const locked = pinRequired(status, layer);
+
   const handleStartTaskClick = async () => {
-    if (pinVerified) {
+    // PIN only required in Layer 2. In Layer 1, start immediately!
+    if (!locked || pinVerified) {
       begin();
       return;
     }
@@ -99,6 +142,7 @@ export default function MotorTaskPage() {
         sessionId: sessionIdRef.current,
         userId,
         sessionType: "motor_task",
+        layer: "layer2",
         deviceId: stableDeviceId(),
         startedAt: startedAt!,
         endedAt,
@@ -116,6 +160,7 @@ export default function MotorTaskPage() {
         startedAt: startedAt!,
         endedAt,
         sessionType: "motor_task",
+        layer: "layer2",
         deviceId: payload.deviceId,
         features:
           (analysis["features"] as Record<string, number | null>) ??
@@ -142,72 +187,97 @@ export default function MotorTaskPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      {/* Sensor Status Capsule */}
+      <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 py-1.5 backdrop-blur-md shadow-[0_2px_8px_rgba(0,38,32,0.04)]">
+        <span className="relative flex h-2 w-2">
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-[#002620]" />
+        </span>
+        <span className="font-mono text-xs font-semibold tracking-wider uppercase text-[#002620]">
+          High-Precision Timer • 15s Motor Task
+        </span>
+      </div>
+
       <PageHeader
         eyebrow="Measurement"
-        title="Motor task — F/J alternation"
-        description="Alternate the F and J keys as steadily as you can for 15 seconds. This task is tracked in your personal trend only — it is never compared against a population."
+        title="Motor Task — F/J Alternation"
+        description="Alternate the F and J keys as rhythmically and steadily as you can for 15 seconds. This task tracks your finger tap cadence across sessions."
         actions={
           <button
             type="button"
             onClick={() => setIsSetupModalOpen(true)}
-            className="rounded-md border border-hair px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
+            className="rounded-full border border-[#c1c8c5]/40 bg-white/80 px-4 py-1.5 text-xs font-semibold text-[#002620] transition-colors hover:border-[#002620]/30 hover:bg-white"
           >
             Change session PIN
           </button>
         }
       />
 
-      <Card className="mt-6">
-        <div className="flex flex-col items-center py-2">
-          <p className="label">Time remaining</p>
+      <div className="glass-panel mt-6 rounded-3xl p-8 sm:p-10">
+        <div className="flex flex-col items-center py-2 text-center">
+          <span className="rounded-full bg-[#002620]/5 px-3 py-1 font-mono text-xs font-semibold uppercase tracking-wider text-[#002620]">
+            Time Remaining
+          </span>
           <p
-            className={`mt-2 font-mono text-6xl font-semibold leading-none tabular-nums ${
-              active ? "text-ink" : "text-muted"
+            className={`mt-4 font-mono text-7xl font-bold leading-none tracking-tight tabular-nums ${
+              active ? "text-[#002620]" : "text-[#486455]/40"
             }`}
           >
             {remaining.toFixed(0)}
-            <span className="ml-1 text-2xl">s</span>
+            <span className="ml-1 text-3xl font-medium">s</span>
           </p>
 
-          <div className="mt-5 h-1 w-full max-w-sm overflow-hidden rounded-full bg-hair" aria-hidden>
+          <div className="mt-6 h-2 w-full max-w-md overflow-hidden rounded-full bg-[#c1c8c5]/30 p-0.5" aria-hidden>
             <div
-              className="h-full rounded-full bg-trace transition-[width] duration-200"
+              className="h-full rounded-full bg-[#002620] transition-[width] duration-200"
               style={{ width: `${elapsedPct}%` }}
             />
           </div>
 
-          <p className="mt-4 font-mono text-sm tabular-nums text-ink-soft">
-            <span className="text-ink">{taps}</span> taps
-          </p>
+          <div className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white/80 px-4 py-2 border border-white/80 shadow-sm">
+            <span className="font-mono text-lg font-bold text-[#002620]">{taps}</span>
+            <span className="text-xs font-medium uppercase tracking-wider text-[#486455]">Recorded Taps</span>
+          </div>
 
-          <div className="mt-6 flex min-h-[44px] items-center justify-center">
+          <div className="mt-8 flex min-h-[48px] items-center justify-center">
             {!active && !startedAt && (
               <PrimaryButton onClick={handleStartTaskClick}>
                 {pinVerified ? `Start ${DURATION_MS / 1000}-second task` : "Unlock and start task"}
               </PrimaryButton>
             )}
             {active && (
-              <span className="flex items-center gap-2">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-trace" aria-hidden />
-                <span className="text-sm font-semibold tracking-tight text-ink">
-                  Recording — alternate F and J
+              <div className="flex flex-col items-center gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[#002620] px-4 py-2 text-xs font-semibold text-white shadow-sm">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-hidden />
+                  Recording — Alternate F and J
                 </span>
-              </span>
+                <button
+                  type="button"
+                  onClick={handleResetTask}
+                  className="text-xs text-[#486455] hover:text-[#904d00] underline underline-offset-2 transition-colors"
+                >
+                  Cancel / Start Over
+                </button>
+              </div>
             )}
             {!active && startedAt && (
-              <PrimaryButton onClick={finish} disabled={busy}>
-                {busy ? "Analysing…" : "Finish & analyze"}
-              </PrimaryButton>
+              <div className="flex flex-wrap items-center gap-3">
+                <PrimaryButton onClick={finish} disabled={busy}>
+                  {busy ? "Analysing…" : "Finish & analyze"}
+                </PrimaryButton>
+                <SecondaryButton onClick={handleResetTask} disabled={busy}>
+                  Retry task
+                </SecondaryButton>
+              </div>
             )}
           </div>
 
           {error && (
-            <p className="mt-3 rounded-md border border-signal/35 bg-signal-wash px-3 py-2 text-xs text-[#8a5a06]">
+            <p className="mt-4 rounded-xl border border-[#904d00]/30 bg-[#904d00]/10 px-4 py-2.5 text-xs font-medium text-[#904d00]">
               {error}
             </p>
           )}
         </div>
-      </Card>
+      </div>
 
       <PinInputModal
         isOpen={isPinModalOpen}

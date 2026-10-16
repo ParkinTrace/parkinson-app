@@ -22,15 +22,32 @@ logger = logging.getLogger("parkintrace.auth")
 
 
 def decode_jwt_payload(token: str) -> dict[str, Any] | None:
-    """Decode JWT payload using standard library without external dependencies.
+    """Decode and validate JWT payload.
     
-    Validates token structure and URL-safe base64 encoding.
+    If SUPABASE_JWT_SECRET is set, cryptographically verifies the token signature.
+    Otherwise decodes payload and validates structure.
     """
     if not token or not isinstance(token, str):
         return None
     parts = token.strip().split(".")
     if len(parts) != 3:
         return None
+
+    jwt_secret = os.environ.get("SUPABASE_JWT_SECRET")
+    if jwt_secret:
+        try:
+            import jwt
+            decoded = jwt.decode(
+                token,
+                jwt_secret,
+                algorithms=["HS256"],
+                options={"verify_signature": True, "verify_exp": False, "verify_aud": False},  # exp checked explicitly in verify_user_authorization
+            )
+            return decoded
+        except Exception as e:
+            logger.warning("Cryptographic JWT signature verification failed: %s", e)
+            return None
+
     try:
         payload_b64 = parts[1]
         padded = payload_b64 + "=" * (-len(payload_b64) % 4)

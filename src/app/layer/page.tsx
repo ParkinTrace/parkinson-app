@@ -59,11 +59,7 @@ export default function LayerSelectionPage() {
                 <p className="mt-1 text-sm font-medium text-ink">{o.line}</p>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">{o.detail}</p>
                 <div className="mt-4">
-                  {o.layer === "layer1" ? (
-                    <PrimaryButton onClick={() => choose(o.layer)}>{o.cta}</PrimaryButton>
-                  ) : (
-                    <SecondaryButton onClick={() => choose(o.layer)}>{o.cta}</SecondaryButton>
-                  )}
+                  <PrimaryButton onClick={() => choose(o.layer)}>{o.cta}</PrimaryButton>
                 </div>
               </div>
             </div>

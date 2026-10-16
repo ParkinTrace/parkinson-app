@@ -49,7 +49,7 @@ export function Trace({
   height?: number;
   className?: string;
 }) {
-  const sweepWidth = 100 / (hold.length * 2);
+  const sweepWidth = hold.length > 0 ? 100 / (hold.length * 2) : 0;
 
   return (
     <div

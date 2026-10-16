@@ -116,8 +116,8 @@ export async function setupPin(
         return { ok: false, error: body.detail || "Failed to set PIN." };
       }
       return { ok: true };
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : "Network error" };
+    } catch {
+      // Network failure / backend offline — fall back to offline dev storage
     }
   }
 
@@ -166,8 +166,8 @@ export async function verifyPin(
         markSessionUnlocked(body.token);
         return { ok: true, token: body.token };
       }
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : "Verification request failed" };
+    } catch {
+      // Network failure / backend offline — fall back to offline dev storage
     }
   }
 

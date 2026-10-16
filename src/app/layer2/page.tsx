@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Card,
   EmptyState,
@@ -14,10 +15,16 @@ import {
 } from "@/components/ui";
 import { LongitudinalChart, type TrendPoint } from "@/components/charts";
 import { ClinicianReportModal } from "@/components/ClinicianReportModal";
+import { PinInputModal } from "@/components/PinInputModal";
+import { PinSetupModal } from "@/components/PinSetupModal";
 import { baselineProgress } from "@/lib/baseline";
 import { fetchHistory, stableDeviceId } from "@/lib/session";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { API_URL } from "@/lib/config";
+import { fetchPinStatus, isSessionUnlocked } from "@/lib/pinClient";
+import { useAppStore } from "@/store/useAppStore";
+import { BackButton } from "@/components/BackButton";
+import { Mascot } from "@/components/Mascot";
 import type { ClinicianReport, SessionRow, TreatmentComparison, TreatmentEvent } from "@/lib/types";
 
 /** Robust z-score cut used for the scorecard state, matching the backend
@@ -38,7 +45,7 @@ function metricState(
   if (value === null) return "unknown";
   if (!stat || !stat.mad) return "unknown";
   const robustZ = (value - stat.median) / (1.4826 * stat.mad);
-  return robustZ >= ROBUST_Z_WATCH ? "elevated" : "normal";
+  return Math.abs(robustZ) >= ROBUST_Z_WATCH ? "elevated" : "normal";
 }
 
 const INDICATOR_OPTIONS = [
@@ -160,7 +167,76 @@ export default function Layer2Page() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [hasPinConfigured, setHasPinConfigured] = useState<boolean>(false);
   const [isDemoActive, setIsDemoActive] = useState(false);
+
+  // Layer 2 Session PIN & Daily Protocol
+  const setLayer = useAppStore((s) => s.setLayer);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
+  const [medicationStatus, setMedicationStatus] = useState<string>("none");
+  const [reminderEnabled, setReminderEnabled] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMed = localStorage.getItem("parkintrace_med_status");
+      if (savedMed) setMedicationStatus(savedMed);
+      const savedReminder = localStorage.getItem("parkintrace_reminder_active") === "1";
+      setReminderEnabled(savedReminder);
+    }
+  }, []);
+
+  const handleToggleReminder = async () => {
+    if (typeof window === "undefined") return;
+    if (!reminderEnabled) {
+      if ("Notification" in window) {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm === "granted") {
+            setReminderEnabled(true);
+            localStorage.setItem("parkintrace_reminder_active", "1");
+          } else {
+            setReportError("Notification permission was not granted. You can still track daily sessions manually.");
+          }
+        } catch {
+          setReminderEnabled(true);
+          localStorage.setItem("parkintrace_reminder_active", "1");
+        }
+      } else {
+        setReminderEnabled(true);
+        localStorage.setItem("parkintrace_reminder_active", "1");
+      }
+    } else {
+      setReminderEnabled(false);
+      localStorage.setItem("parkintrace_reminder_active", "0");
+    }
+  };
+
+  const handleStartDailySession = async () => {
+    if (isSessionUnlocked()) {
+      setLayer("layer2");
+      router.push("/test");
+      return;
+    }
+    const hasPin = await fetchPinStatus();
+    if (!hasPin) {
+      setIsSetupModalOpen(true);
+    } else {
+      setIsPinModalOpen(true);
+    }
+  };
+
+  const handlePinSuccess = () => {
+    setIsPinModalOpen(false);
+    setLayer("layer2");
+    router.push("/test");
+  };
+
+  const handleSetupSuccess = () => {
+    setIsSetupModalOpen(false);
+    setIsPinModalOpen(true);
+  };
 
   // New Event Form State
   const [eventDate, setEventDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -168,23 +244,41 @@ export default function Layer2Page() {
   const [description, setDescription] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [submittingEvent, setSubmittingEvent] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const loadRealData = async () => {
     const rows = await fetchHistory();
-    setSessions(rows);
+    // Exclusively Layer 2 sessions for personal baseline
+    const layer2Rows = rows.filter(
+      (r) =>
+        r.layer === "layer2" ||
+        (r as any).device_metadata?.layer === "layer2" ||
+        r.session_type === "motor_task",
+    );
+    setSessions(layer2Rows);
     const supa = supabaseBrowser();
     let activeUserId: string | null = null;
+    let activeEmail: string | null = null;
 
     if (supa) {
       const { data: auth } = await supa.auth.getUser();
       if (auth.user) {
         activeUserId = auth.user.id;
+        activeEmail = auth.user.email ?? null;
       }
     }
-    if (!activeUserId && typeof window !== "undefined") {
-      activeUserId = localStorage.getItem("parkintrace_user_id") || "00000000-0000-0000-0000-000000000000";
+    if (!activeUserId) {
+      activeUserId = "00000000-0000-0000-0000-000000000000";
     }
     setUserId(activeUserId);
+
+    if (!activeEmail && typeof window !== "undefined") {
+      activeEmail =
+        sessionStorage.getItem("parkintrace_active_email") ||
+        localStorage.getItem("parkintrace_active_email");
+    }
+    setUserEmail(activeEmail);
+    fetchPinStatus().then(setHasPinConfigured).catch(() => {});
 
     if (supa && activeUserId && activeUserId !== "00000000-0000-0000-0000-000000000000") {
       const { data: metricsData } = await supa
@@ -343,17 +437,20 @@ export default function Layer2Page() {
     }
 
     if (!userId) {
-      alert("Sign in required to compile a patient longitudinal report.");
+      setReportError("Sign in required to compile a patient longitudinal report.");
       return;
     }
     try {
+      setReportError(null);
       const res = await fetch(`${API_URL}/api/v1/reports/clinician-summary?user_id=${userId}`);
       if (res.ok) {
         setReport(await res.json());
         setShowReport(true);
+      } else {
+        setReportError("Unable to compile report from current sessions.");
       }
     } catch {
-      alert("Failed to compile clinician longitudinal report.");
+      setReportError("Failed to connect to backend service to compile report.");
     }
   };
 
@@ -366,26 +463,6 @@ export default function Layer2Page() {
           description="Within-person baseline and change detection. Nothing here is compared against other people — only against your own frozen reference."
         />
         <p className="text-sm text-muted">Loading personal monitoring dashboard…</p>
-      </div>
-    );
-  }
-
-  if (!sessions.length && !isDemoActive) {
-    return (
-      <div className="flex flex-col gap-6">
-        <PageHeader
-          eyebrow="Layer 02"
-          title="Personal Motor-Pattern Monitoring"
-          description="Within-person baseline and change detection. Nothing here is compared against other people — only against your own frozen reference."
-        />
-        <EmptyState
-          title="No sessions recorded yet"
-          body="Personal baseline monitoring needs repeated typing sessions on different days before it can compare you with yourself. Until then it reports no baseline reference rather than guessing."
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <PrimaryButton onClick={() => router.push("/test")}>Start a typing session</PrimaryButton>
-          <SecondaryButton onClick={handleToggleDemo}>Demo profile</SecondaryButton>
-        </div>
       </div>
     );
   }
@@ -439,35 +516,308 @@ export default function Layer2Page() {
   const latest = { ht: latestHt, consistency: latestConsistency, asym: latestAsym, pauses: latestPauses };
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        eyebrow={isDemoActive ? "Layer 02 — demo profile" : "Layer 02"}
-        title="Personal Motor-Pattern Monitoring"
-        description="Within-person baseline and change detection. Every comparison is against your own frozen reference, never against other people."
-        actions={
-          <>
-            <SecondaryButton onClick={handleToggleDemo}>
-              {isDemoActive ? "Reset to my data" : "Demo profile"}
-            </SecondaryButton>
-            <SecondaryButton onClick={() => setShowEventForm(!showEventForm)}>
-              {showEventForm ? "Cancel Event" : "+ Record Treatment Event"}
-            </SecondaryButton>
-            <PrimaryButton onClick={handleOpenReport}>Clinician Report View</PrimaryButton>
-          </>
-        }
-      />
+    <div className="flex flex-col gap-6 py-2 sm:py-6">
+      {/* Back Button */}
+      <div>
+        <BackButton fallbackHref="/dashboard" />
+      </div>
+
+      {/* Screen Title & Narrative Header from Stitch */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#d9e5e0]">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide bg-[#caead7] text-[#002620] border border-[#0e7c66]/20">
+              LAYER 02
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-[#486455]">
+              <span className="w-2 h-2 rounded-full bg-[#0e7c66]"></span>
+              Daily Monitoring Active
+            </span>
+          </div>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#183c35]">
+            Layer 2: Personal Baseline &amp; Daily Monitoring
+          </h1>
+          <p className="text-sm text-[#414846] mt-1 leading-relaxed max-w-2xl">
+            Calibrate your personal timing baseline across 10 daily sessions. Monitor day-to-day stability, response to medication, and long-term changes over time.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleToggleDemo}
+            className="py-2 px-3.5 rounded-full bg-white/80 hover:bg-white text-xs font-semibold text-[#002620] border border-[#c1c8c5]/40 shadow-xs cursor-pointer"
+          >
+            {isDemoActive ? "Reset to My Data" : "Demo Profile"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowEventForm(!showEventForm)}
+            className="py-2 px-3.5 rounded-full bg-white/80 hover:bg-white text-xs font-semibold text-[#002620] border border-[#c1c8c5]/40 shadow-xs cursor-pointer"
+          >
+            {showEventForm ? "Cancel Event" : "+ Clinical Event"}
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenReport}
+            className="py-2 px-4 rounded-full bg-[#002620] hover:bg-[#183c35] text-xs font-semibold text-white shadow-xs cursor-pointer"
+          >
+            Clinician Report View
+          </button>
+        </div>
+      </div>
+
+      {/* ================= Participant Profile & Hardware Anchor Hub ================= */}
+      <section className="glass-panel rounded-3xl p-6 sm:p-7 border border-white/90 shadow-[0_12px_32px_-4px_rgba(19,42,38,0.06)] bg-gradient-to-br from-[#FCFAF6] via-white to-[#caead7]/20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-5 border-b border-[#d9e5e0]">
+          <div className="flex items-center gap-4">
+            <Mascot pose="calibrating" className="w-16 h-auto hidden sm:block shrink-0" />
+            <div className="w-14 h-14 rounded-2xl bg-[#002620] text-white flex items-center justify-center font-bold text-xl shadow-md shadow-[#002620]/20 shrink-0">
+              {userEmail ? userEmail.slice(0, 2).toUpperCase() : "PT"}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#002620] text-white">
+                  Participant Profile
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#caead7]/80 text-[#002620] border border-[#0e7c66]/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0e7c66]"></span>
+                  Layer 2 Enrolled
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#131e1b]">
+                {userEmail ?? (userId && userId !== "00000000-0000-0000-0000-000000000000" ? `Participant (${userId.slice(0, 8)}…)` : "Authorized Participant")}
+              </h2>
+              <p className="text-xs text-[#5a6a72] mt-0.5">
+                Observational Baseline Cohort • High-precision micro-telemetry anchor active
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Link
+              href="/profile"
+              className="py-2 px-4 rounded-full bg-white hover:bg-[#F7F5EF] text-xs font-semibold text-[#002620] border border-[#c1c8c5]/40 shadow-xs transition-all active:scale-95"
+            >
+              Account Details →
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsSetupModalOpen(true)}
+              className="py-2 px-4 rounded-full bg-white hover:bg-[#F7F5EF] text-xs font-semibold text-[#002620] border border-[#c1c8c5]/40 shadow-xs transition-all active:scale-95"
+            >
+              {hasPinConfigured ? "Change Workstation PIN" : "Setup 4-Digit PIN"}
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Profile Context Metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+          <div className="bg-white/80 rounded-2xl p-4 border border-[#c1c8c5]/30 shadow-xs">
+            <span className="text-[11px] font-medium text-[#5a6a72] uppercase tracking-wider">Device Anchor</span>
+            <div className="text-sm font-bold font-mono text-[#002620] mt-1 truncate" title={isDemoActive ? "clinic-desktop-anchor" : stableDeviceId()}>
+              {typeof window !== "undefined" ? (isDemoActive ? "clinic-anchor" : stableDeviceId().slice(0, 16)) : "local-device"}…
+            </div>
+            <span className="text-[11px] text-[#5a6a72] mt-0.5 block">Locked to physical hardware</span>
+          </div>
+
+          <div className="bg-white/80 rounded-2xl p-4 border border-[#c1c8c5]/30 shadow-xs">
+            <span className="text-[11px] font-medium text-[#5a6a72] uppercase tracking-wider">Baseline Calibration</span>
+            <div className="text-sm font-bold text-[#002620] mt-1">
+              {isBaselineEstablished ? "Established & Locked" : `${progress.sessions} of 10 Sessions`}
+            </div>
+            <span className="text-[11px] text-[#5a6a72] mt-0.5 block">
+              {progress.distinctDays} of 5 distinct days recorded
+            </span>
+          </div>
+
+          <div className="bg-white/80 rounded-2xl p-4 border border-[#c1c8c5]/30 shadow-xs">
+            <span className="text-[11px] font-medium text-[#5a6a72] uppercase tracking-wider">Workstation Security</span>
+            <div className="text-sm font-bold text-[#002620] mt-1 flex items-center gap-1.5">
+              <span>{hasPinConfigured ? "🔒 4-Digit PIN Active" : "🔓 PIN Not Configured"}</span>
+            </div>
+            <span className="text-[11px] text-[#5a6a72] mt-0.5 block">Protects daily longitudinal entry</span>
+          </div>
+
+          <div className="bg-white/80 rounded-2xl p-4 border border-[#c1c8c5]/30 shadow-xs">
+            <span className="text-[11px] font-medium text-[#5a6a72] uppercase tracking-wider">Daily Entry Action</span>
+            <button
+              type="button"
+              onClick={handleStartDailySession}
+              className="mt-1 w-full py-1.5 px-3 rounded-xl bg-[#002620] hover:bg-[#183c35] text-white text-xs font-semibold shadow-xs transition-all active:scale-95 text-center"
+            >
+              Start Daily Session →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {reportError && (
+        <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50 p-4 text-xs text-red-800">
+          <span>{reportError}</span>
+          <button
+            type="button"
+            onClick={() => setReportError(null)}
+            className="font-semibold uppercase tracking-wider hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* 1. Baseline Progression Vitrine (Stitch Specification) */}
+      <section className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/90 shadow-md">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#d9e5e0]">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-[#486455] font-semibold">Calibration Phase</div>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#183c35] mt-1">
+              Baseline Status: {isDemoActive ? 10 : progress.sessions} of {progress.required} Calibration Sessions Logged
+            </h2>
+          </div>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#caead7]/60 border border-[#0e7c66]/20 text-[#002620]">
+            <span className="w-2 h-2 rounded-full bg-[#0e7c66]"></span>
+            <span className="text-xs font-bold">
+              {isDemoActive ? "100% Calibrated" : `${Math.round(((progress.sessions ?? 0) / (progress.required ?? 10)) * 100)}% Calibrated`}
+            </span>
+          </div>
+        </div>
+
+        {/* Segmented Calibration Track (Stitch) */}
+        <div className="mt-6">
+          <div className="flex items-center justify-between text-xs text-[#5a6a72] mb-3">
+            <span className="font-semibold text-[#002620]">Segmented Baseline Progress</span>
+            <span>
+              {isBaselineEstablished
+                ? "Full personal stability corridor established"
+                : `${Math.max(0, 10 - (progress.sessions ?? 0))} sessions remaining across ${Math.max(0, 5 - (progress.distinctDays ?? 0))} days`}
+            </span>
+          </div>
+          <div className="grid grid-cols-10 gap-2">
+            {Array.from({ length: 10 }).map((_, idx) => {
+              const completed = (isDemoActive ? 10 : progress.sessions) > idx;
+              return (
+                <div
+                  key={idx}
+                  className={`h-3 rounded-full transition-all duration-300 ${
+                    completed
+                      ? "bg-[#002620] shadow-xs"
+                      : "bg-[#d9e5e0]/70 border border-[#c1c8c5]/40"
+                  }`}
+                  title={`Session ${idx + 1}: ${completed ? "Completed" : "Pending"}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Daily Baseline Measurement Protocol CTA */}
+      <section className="glass-substrate rounded-3xl p-6 sm:p-7 border border-white/90 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="rounded-full bg-[#caead7]/70 px-2.5 py-0.5 text-[11px] font-bold text-[#002620]">
+                DAILY PROTOCOL
+              </span>
+              <span className="text-xs font-semibold text-[#486455]">Session PIN Protected</span>
+            </div>
+            <h3 className="font-display text-lg font-bold text-[#183c35]">
+              Ready for Today&apos;s Baseline Calibration?
+            </h3>
+            <p className="mt-1 max-w-xl text-sm leading-relaxed text-[#414846]">
+              Enter your secure 4-digit PIN to ensure calibration data is strictly yours, then complete your 30-second typing check to build or monitor your personal baseline.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <button
+              type="button"
+              onClick={handleStartDailySession}
+              className="py-3 px-6 rounded-full bg-[#002620] hover:bg-[#183c35] text-white text-sm font-semibold shadow-md shadow-[#002620]/20 transition-all active:scale-[0.98]"
+            >
+              Unlock &amp; Start Daily Session →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Context: Medication & Schedule Questionnaire Card */}
+      <section className="glass-panel rounded-3xl p-6 sm:p-7 border border-white/90 shadow-xs">
+        <div className="flex items-center justify-between border-b border-[#d9e5e0] pb-3 mb-4">
+          <div>
+            <span className="label text-[#002620]">Context &amp; Schedule</span>
+            <h3 className="font-display text-base font-bold text-[#183c35] mt-0.5">
+              Medication Status &amp; Daily Reminders
+            </h3>
+          </div>
+          <span className="text-xs text-[#5a6a72]">Personalized Routine</span>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          {/* Medication Status Dropdown */}
+          <div className="rounded-2xl border border-white/80 bg-white/70 p-4 shadow-xs">
+            <label className="label text-[#002620] block mb-1">
+              Are you on dopaminergic medication?
+            </label>
+            <select
+              value={medicationStatus}
+              onChange={(e) => {
+                setMedicationStatus(e.target.value);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("parkintrace_med_status", e.target.value);
+                }
+              }}
+              className="mt-2 w-full rounded-xl border border-[#c1c8c5]/50 bg-white px-3.5 py-2 text-sm text-[#131e1b] focus:border-[#0e7c66] focus:outline-none"
+            >
+              <option value="none">Not currently taking Parkinson&apos;s medication</option>
+              <option value="levodopa">Levodopa / Carbidopa (Sinemet / Stalevo)</option>
+              <option value="agonist">Dopamine Agonist (Pramipexole / Ropinirole)</option>
+              <option value="maob">MAO-B Inhibitor (Rasagiline / Selegiline)</option>
+              <option value="other">Other therapy or combination</option>
+            </select>
+            <p className="mt-2 text-xs text-[#5a6a72] leading-relaxed">
+              Recording medication context helps interpret whether variations in your keystroke timing align with medication cycles.
+            </p>
+          </div>
+
+          {/* Daily Reminder Toggle */}
+          <div className="rounded-2xl border border-white/80 bg-white/70 p-4 shadow-xs">
+            <label className="label text-[#002620] block mb-1">
+              Daily Typing Session Reminder
+            </label>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-[#131e1b]">
+                Send daily prompt
+              </span>
+              <button
+                type="button"
+                onClick={handleToggleReminder}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                  reminderEnabled
+                    ? "bg-[#002620] text-white shadow-xs"
+                    : "border border-[#c1c8c5]/50 bg-white text-[#5a6a72] hover:text-[#002620]"
+                }`}
+              >
+                {reminderEnabled ? "✓ Active (Daily 9 AM)" : "Enable reminder"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-[#5a6a72] leading-relaxed">
+              Consistent daily typing at approximately the same time of day provides the cleanest baseline calibration.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* The reading: latest session against the personal reference */}
-      <Card>
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-hair pb-3">
+      <section className="glass-panel rounded-3xl p-6 sm:p-7 border border-white/90 shadow-xs">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#d9e5e0] pb-3">
           <div>
-            <p className="label">Latest session against your reference</p>
-            <p className="mt-1.5 font-display text-lg font-semibold tracking-tight text-ink">{headline}</p>
+            <p className="label text-[#002620]">Latest session against your reference</p>
+            <h3 className="mt-1.5 font-display text-lg font-bold tracking-tight text-[#183c35]">{headline}</h3>
           </div>
           <StatusBadge status={isDemoActive ? "established" : progress.status} />
         </div>
 
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-soft">{message}</p>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#414846]">{message}</p>
 
         <dl className="mt-4 flex flex-col">
           <Readout
@@ -500,38 +850,14 @@ export default function Layer2Page() {
           />
         </dl>
 
-        <p className="mt-4 flex items-start gap-2 border-t border-hair pt-4 text-xs leading-relaxed text-muted">
-          <span className="mt-[5px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-signal" aria-hidden />
+        <p className="mt-4 flex items-start gap-2 border-t border-[#d9e5e0] pt-4 text-xs leading-relaxed text-[#5a6a72]">
+          <span className="mt-[5px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#002620]" aria-hidden />
           <span>
             Flags mean &ldquo;outside your own range&rdquo;, measured with the same robust-z rule the backend
             engine uses. They are not a diagnosis and not a severity score.
           </span>
         </p>
-      </Card>
-
-      {/* Baseline status */}
-      <Card>
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="label">Baseline</p>
-            <h2 className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
-              Personal Baseline:{" "}
-              <span className="capitalize">{isDemoActive ? "established (demo)" : progress.status}</span>
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-              {progress.sessions} of {progress.required} qualifying sessions · {progress.distinctDays} of{" "}
-              {progress.requiredDays} distinct recording days
-              {progress.anchorDevice ? ` · anchor device ${progress.anchorDevice.slice(0, 12)}…` : ""}.
-            </p>
-          </div>
-          <div className="w-full shrink-0 sm:w-56">
-            <Meter value={progress.sessions} max={progress.required} caption="sessions" />
-            <div className="mt-3">
-              <Meter value={progress.distinctDays} max={progress.requiredDays} caption="recording days" />
-            </div>
-          </div>
-        </div>
-      </Card>
+      </section>
 
       {/* Record Treatment Event Form */}
       {showEventForm && (
@@ -710,7 +1036,7 @@ export default function Layer2Page() {
         <ul className="mt-3">
           {[...sessions].reverse().slice(0, 15).map((s) => (
             <li key={s.id} className="border-b border-hair last:border-b-0">
-              <a
+              <Link
                 href={`/session/${s.id}`}
                 className="flex flex-col gap-1 py-2.5 transition-colors hover:bg-canvas sm:flex-row sm:items-center sm:justify-between"
               >
@@ -724,13 +1050,29 @@ export default function Layer2Page() {
                   <span className="font-mono text-[11px] text-muted">device {s.device_id.slice(0, 8)}…</span>
                   <span className="label">{(s.quality_flags ?? []).join(", ") || "validated"}</span>
                 </span>
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
       </Card>
 
       <ClinicianReportModal report={report} isOpen={showReport} onClose={() => setShowReport(false)} />
+
+      <PinInputModal
+        isOpen={isPinModalOpen}
+        onSuccess={handlePinSuccess}
+        onRequestSetup={() => {
+          setIsPinModalOpen(false);
+          setIsSetupModalOpen(true);
+        }}
+        onCancel={() => setIsPinModalOpen(false)}
+      />
+
+      <PinSetupModal
+        isOpen={isSetupModalOpen}
+        onSuccess={handleSetupSuccess}
+        onCancel={() => setIsSetupModalOpen(false)}
+      />
     </div>
   );
 }

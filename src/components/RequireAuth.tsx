@@ -21,9 +21,17 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     if (gated && status === "signed-out") router.replace("/");
   }, [gated, status, router]);
 
-  // Render nothing while an unknown session state would otherwise flash
-  // private content before the redirect lands.
-  if (gated && status !== "signed-in") return null;
+  // Render a clean loading indicator while auth resolves, preventing private flash
+  if (gated && status !== "signed-in") {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2.5">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-hair border-t-trace" />
+          <span className="font-mono text-xs text-muted">Checking authentication…</span>
+        </div>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

@@ -1,6 +1,8 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Card,
   EmptyState,
@@ -10,6 +12,7 @@ import {
   SecondaryButton,
 } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/supabaseClient";
+import { lockSession } from "@/lib/pinClient";
 import {
   baselineProgress,
   baselineStanding,
@@ -18,16 +21,17 @@ import {
 } from "@/lib/baseline";
 import { fetchHistory, stableDeviceId } from "@/lib/session";
 import { useAppStore } from "@/store/useAppStore";
+import { BackButton } from "@/components/BackButton";
+import { Mascot } from "@/components/Mascot";
 import type { SessionRow } from "@/lib/types";
 
-/** How many past sessions the home page shows. The full record is /history —
- *  this is a glance, not an archive. */
-const RECENT = 3;
+/** How many past sessions the dashboard displays in the glance list. */
+const RECENT = 4;
 
 export default function DashboardPage() {
   const router = useRouter();
-  const layer = useAppStore((s) => s.layer);
   const setLayer = useAppStore((s) => s.setLayer);
+  const resetSession = useAppStore((s) => s.resetSession);
   const [rows, setRows] = useState<SessionRow[] | null>(null);
   const [progress, setProgress] = useState<BaselineProgress | null>(null);
   const [standing, setStanding] = useState<BaselineStanding | null>(null);
@@ -38,29 +42,67 @@ export default function DashboardPage() {
     fetchHistory().then((history) => {
       if (!active) return;
       const device = stableDeviceId();
-      setRows(history);
-      setProgress(baselineProgress(history, device));
-      setStanding(baselineStanding(history, device));
+      // CRITICAL: Differentiate Layer 1 vs Layer 2. Layer 1 is strictly a sample screening test
+      // and must NEVER be counted in the longitudinal baseline, session count, or calibration progress.
+      const layer2Rows = history.filter(
+        (r) =>
+          r.layer === "layer2" ||
+          (r as any).device_metadata?.layer === "layer2" ||
+          r.session_type === "motor_task",
+      );
+      setRows(layer2Rows);
+      setProgress(baselineProgress(layer2Rows, device));
+      setStanding(baselineStanding(layer2Rows, device));
     });
     supabaseBrowser()
       ?.auth.getSession()
       .then(({ data }) => {
-        if (active) setEmail(data.session?.user?.email ?? null);
+        if (active) {
+          if (data.session?.user?.email) {
+            setEmail(data.session.user.email);
+          } else if (typeof window !== "undefined") {
+            const stored =
+              sessionStorage.getItem("parkintrace_active_email") ||
+              localStorage.getItem("parkintrace_active_email");
+            if (stored) setEmail(stored);
+          }
+        }
       })
       .catch(() => {
-        /* the page works without a name on it */
+        if (typeof window !== "undefined") {
+          const stored =
+            sessionStorage.getItem("parkintrace_active_email") ||
+            localStorage.getItem("parkintrace_active_email");
+          if (active && stored) setEmail(stored);
+        }
       });
     return () => {
       active = false;
     };
   }, []);
 
-  /* A session started inside the app belongs to the account, and a session in
-     an account is Layer 2. Declaring it here keeps the recorder honest about
-     which layer it is measuring for. */
-  const startToday = () => {
+  const handleSignOut = async () => {
+    try {
+      await supabaseBrowser()?.auth.signOut();
+    } catch {}
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("parkintrace_freshly_signed_in");
+      sessionStorage.removeItem("parkintrace_active_email");
+      localStorage.removeItem("parkintrace_active_email");
+    }
+    lockSession();
+    resetSession();
+    router.push("/login");
+  };
+
+  const startLayer1 = () => {
+    setLayer("layer1");
+    router.push("/layer1");
+  };
+
+  const startLayer2 = () => {
     setLayer("layer2");
-    router.push("/test");
+    router.push("/layer2");
   };
 
   const established = progress?.status === "established";
@@ -68,169 +110,316 @@ export default function DashboardPage() {
   const recent = numbered.slice(-RECENT).reverse();
   const dayShown = standing ? Math.min(standing.daysWithToday, standing.requiredDays) : 0;
 
-  const todayLine = !standing
-    ? "Reading your record…"
-    : standing.building
-      ? `Session ${Math.min(standing.next, standing.required)} of ${standing.required} · Day ${dayShown} of ${standing.requiredDays}. Layer 2 compares you only against your own baseline, and it needs recordings on different days — a second session today still counts, but coming back tomorrow is what moves the day count.`
-      : `This will be session ${standing.next}. Your baseline is established, so the session is read against your own frozen reference.`;
-
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        eyebrow="Home"
-        title="Dashboard"
-        description={
-          email
-            ? `Signed in as ${email}. Both layers read the same recorded sessions.`
-            : "Both layers read the same recorded sessions."
-        }
-        actions={
-          <SecondaryButton onClick={() => router.push("/motor-task")}>
-            Motor task (F/J)
-          </SecondaryButton>
-        }
-      />
+    <div className="flex flex-col gap-6 py-2 sm:py-6">
+      {/* Back Button */}
+      <div>
+        <BackButton fallbackHref="/" />
+      </div>
 
-      {/* The one action this page exists to offer. Everything below it is a
-          reading of what that action has produced so far. */}
-      <Card className="border-t-2 border-t-ink">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="label">Today</p>
-            <p className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
-              {standing?.recordedToday
-                ? "Today's session is recorded."
-                : "Today's session is waiting."}
+      {/* ================= Welcoming Header Glass Substrate ================= */}
+      <section className="glass-substrate rounded-3xl p-6 sm:p-8 border border-white/80 shadow-[0_12px_32px_-4px_rgba(19,42,38,0.04)]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#c7e7d4]/60 text-[#002620] border border-[#0e7c66]/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0e7c66]"></span>
+                Motor Health Dashboard
+              </span>
+              <span className="text-xs text-[#5a6a72] font-medium">
+                Device: {typeof window !== "undefined" ? stableDeviceId().slice(0, 12) : "Local Device"}…
+              </span>
+            </div>
+            <div className="flex items-center flex-wrap gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#131e1b]">
+                Welcome back, <span className="text-[#002620]">{email ? email.split("@")[0] : "Participant"}</span>
+              </h1>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-white hover:bg-[#ffdad6] text-[#414846] hover:text-[#93000a] border border-[#c1c8c5]/40 transition-colors shadow-xs cursor-pointer"
+                title="Sign out or switch to another participant account"
+              >
+                <span>Switch account</span>
+              </button>
+            </div>
+            <p className="text-sm text-[#414846] mt-1.5 leading-relaxed max-w-2xl">
+              ParkinTrace measures your everyday typing speed and keypress rhythm to detect subtle motor trends. Choose a screening or record your daily session below.
             </p>
-            <p className="mt-1 max-w-xl text-sm leading-relaxed text-ink-soft">{todayLine}</p>
           </div>
-          <div className="shrink-0">
-            <PrimaryButton onClick={startToday}>
-              {standing?.recordedToday ? "Record another session" : "Start today's session"}
-            </PrimaryButton>
-          </div>
-        </div>
-      </Card>
 
-      {/* Where the next measurement sits */}
-      <Card>
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="label">Recording status</p>
-            <p className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
-              {established ? "Baseline established" : "Baseline still being built"}
-            </p>
-            <p className="mt-1 max-w-xl text-sm leading-relaxed text-ink-soft">
-              {established
-                ? "Layer 2 can now compare each new session against your own frozen reference."
-                : "Layer 2 needs repeated sessions across different days before it can compare you against yourself. Until then it reports no baseline reference rather than guessing."}
-            </p>
-          </div>
-          <div className="w-full shrink-0 sm:w-56">
-            <Meter value={progress?.sessions ?? 0} max={progress?.required ?? 10} caption="sessions" />
-            <div className="mt-3">
-              <Meter
-                value={progress?.distinctDays ?? 0}
-                max={progress?.requiredDays ?? 5}
-                caption="recording days"
-              />
+          <div className="flex flex-wrap items-center gap-4 shrink-0">
+            <Mascot pose="analyst" className="w-20 h-auto hidden lg:block" />
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/history"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold text-[#002620] bg-white/80 hover:bg-white border border-[#c1c8c5]/40 transition-all shadow-xs active:scale-95"
+              >
+                <span>📋</span>
+                <span>View History</span>
+              </Link>
+              <button
+                type="button"
+                onClick={startLayer1}
+                className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full text-xs font-semibold text-white bg-[#002620] hover:bg-[#183c35] transition-all shadow-[0_8px_20px_-4px_rgba(14,124,102,0.35)] active:scale-95"
+              >
+                <span>⌨️</span>
+                <span>Start 30s Check</span>
+              </button>
             </div>
           </div>
         </div>
-      </Card>
+      </section>
 
-      {/* The record, numbered: "session 3" is a real answer to a real question. */}
-      {rows && rows.length > 0 ? (
-        <Card className="p-0">
-          <div className="flex items-baseline justify-between gap-3 border-b border-hair px-5 py-3">
-            <h2 className="label">Recent sessions</h2>
-            <a
-              href="/history"
-              className="text-xs font-semibold tracking-tight text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
-            >
-              All sessions
-            </a>
+      {/* ================= Top 4 Metric Glass Cards ================= */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Last Layer 2 Baseline Session */}
+        <div className="glass-card-subtle rounded-2xl p-5 border border-white/80 shadow-[0_8px_24px_-4px_rgba(19,42,38,0.03)] flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <div className="flex items-center justify-between mb-3 text-xs font-medium text-[#5a6a72]">
+              <span>Layer 2 Baseline Sessions</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#caead7]/60 text-[#002620] text-[11px] font-semibold">
+                {rows && rows.length > 0 ? "Recorded" : "Ready"}
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-[#131e1b] mb-1">
+              {rows && rows.length > 0 ? `#${rows.length}` : "Session #01"}
+            </div>
+            <p className="text-xs text-[#5a6a72]">
+              {rows && rows.length > 0
+                ? `${rows[rows.length - 1].started_at.slice(0, 10)} · completed`
+                : "Awaiting your first Layer 2 session"}
+            </p>
           </div>
-          <ul>
-            {recent.map(({ row, n }) => (
-              <li key={row.id} className="border-b border-hair last:border-b-0">
-                <a
-                  href={`/session/${row.id}`}
-                  className="flex flex-col gap-1 px-5 py-3 transition-colors hover:bg-canvas sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <span className="flex items-baseline gap-3">
-                    <span className="font-mono text-[11px] font-medium text-trace">
-                      {String(n).padStart(2, "0")}
-                    </span>
-                    <span className="font-mono text-[13px] tabular-nums text-ink">
-                      {row.started_at.slice(0, 16).replace("T", " ")}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-3">
-                    <span className="label">{row.session_type}</span>
-                    <span className="font-mono text-[11px] text-muted">{row.id.slice(0, 8)}…</span>
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : (
-        <EmptyState
-          title="No sessions recorded yet"
-          body="Your first measured session appears here, numbered. There is no practice run — the first one is a real measurement."
-        />
-      )}
+          <div className="mt-4 pt-3 border-t border-[#d9e5e0] flex items-center justify-between text-xs">
+            <span className="text-[#5a6a72]">Total Layer 2 Sessions</span>
+            <span className="font-semibold text-[#002620]">{rows ? rows.length : 0}</span>
+          </div>
+        </div>
 
-      {/* The two readings of the same recording */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className={layer === "layer1" ? "border-trace/40 bg-trace-wash/30" : ""}>
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-mono text-[11px] font-medium tracking-[0.14em] text-trace">01</span>
-            {layer === "layer1" && <span className="label">current view</span>}
+        {/* Card 2: Layer 1 Screening */}
+        <div className="glass-card-subtle rounded-2xl p-5 border border-white/80 shadow-[0_8px_24px_-4px_rgba(19,42,38,0.03)] flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <div className="flex items-center justify-between mb-3 text-xs font-medium text-[#5a6a72]">
+              <span>Layer 1 Screening</span>
+              <span className="text-xs">⏱️</span>
+            </div>
+            <div className="text-2xl font-bold text-[#131e1b] mb-1">
+              Quick Check
+            </div>
+            <p className="text-xs text-[#5a6a72]">
+              30s sample screening (not in baseline)
+            </p>
           </div>
-          <h2 className="mt-3 font-display text-base font-semibold tracking-tight text-ink">
-            Layer 1 — Typing-pattern screening
+          <div className="mt-4 pt-3 border-t border-[#d9e5e0] flex items-center justify-between text-xs">
+            <span className="text-[#5a6a72]">Role</span>
+            <span className="font-semibold text-[#002620]">Sample Screener</span>
+          </div>
+        </div>
+
+        {/* Card 3: Layer 2 Baseline Monitor */}
+        <div className="glass-card-subtle rounded-2xl p-5 border border-white/80 shadow-[0_8px_24px_-4px_rgba(19,42,38,0.03)] flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <div className="flex items-center justify-between mb-3 text-xs font-medium text-[#5a6a72]">
+              <span>Layer 2 Baseline</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#caead7]/60 text-[#002620] text-[11px] font-semibold">
+                {established ? "Calibrated" : `${progress?.sessions ?? 0}/10 Sessions`}
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-[#131e1b] mb-1">
+              {established ? "Baseline Active" : "Building"}
+            </div>
+            <p className="text-xs text-[#5a6a72]">
+              {established
+                ? "Personal baseline established"
+                : `${10 - (progress?.sessions ?? 0)} sessions needed to lock`}
+            </p>
+          </div>
+          <div className="mt-4 pt-3 border-t border-[#d9e5e0] flex items-center justify-between text-xs">
+            <span className="text-[#5a6a72]">Status</span>
+            <span className="font-semibold text-[#0e7c66]">
+              {established ? "Tracking Active" : "In Progress"}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Daily Tracking Streak */}
+        <div className="glass-card-subtle rounded-2xl p-5 border border-white/80 shadow-[0_8px_24px_-4px_rgba(19,42,38,0.03)] flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <div className="flex items-center justify-between mb-3 text-xs font-medium text-[#5a6a72]">
+              <span>Monitoring Days</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100/60 text-amber-900 text-[11px] font-semibold">
+                <span>📅</span>
+                <span>Active</span>
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-[#131e1b] mb-1">
+              {dayShown} Days
+            </div>
+            <p className="text-xs text-[#5a6a72]">
+              5 distinct days required
+            </p>
+          </div>
+          <div className="mt-4 pt-3 border-t border-[#d9e5e0] flex items-center justify-between text-xs">
+            <span className="text-[#5a6a72]">Requirement</span>
+            <span className="font-semibold text-[#131e1b]">
+              {dayShown >= 5 ? "Met" : `${5 - dayShown} more days`}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= Visually Separated Core Pathways: Layer 1 vs Layer 2 ================= */}
+      <div className="space-y-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#0e7c66]"></span>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#486455]">
+              Assessment Pathways
+            </span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#183c35]">
+            Select Your Assessment Mode
           </h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-            How your key-timing sits against a research population. Population comparison, read once per
-            session.
+          <p className="text-xs sm:text-sm text-[#414846] mt-0.5 max-w-2xl leading-relaxed">
+            Choose between a quick population sample test or your client-based personal baseline monitoring suite.
           </p>
-          <div className="mt-4">
-            <PrimaryButton
-              onClick={() => {
-                setLayer("layer1");
-                router.push("/layer1");
-              }}
-            >
-              Open Layer 1
-            </PrimaryButton>
-          </div>
-        </Card>
+        </div>
 
-        <Card className={layer === "layer2" ? "border-trace/40 bg-trace-wash/30" : ""}>
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-mono text-[11px] font-medium tracking-[0.14em] text-trace">02</span>
-            {layer === "layer2" && <span className="label">current view</span>}
+        <div className="grid gap-6 md:grid-cols-2 items-stretch">
+          {/* Layer 1 Screening Pathway Card */}
+          <div className="rounded-3xl p-6 sm:p-7 border-2 border-[#0e7c66]/25 bg-gradient-to-b from-[#caead7]/25 via-white to-white shadow-[0_12px_32px_-6px_rgba(14,124,102,0.08)] flex flex-col justify-between hover:border-[#0e7c66]/50 transition-all">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="rounded-full bg-[#002620] px-3 py-1 font-mono text-xs font-bold text-white shadow-xs">
+                  LAYER 01
+                </span>
+                <span className="text-xs font-semibold text-[#002620] bg-[#caead7]/80 border border-[#0e7c66]/25 px-3 py-0.5 rounded-full">
+                  Sample Screening · One-Time Check
+                </span>
+              </div>
+
+              <h3 className="mt-4 font-display text-xl sm:text-2xl font-bold tracking-tight text-[#183c35]">
+                Quick Screening Test
+              </h3>
+              <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[#414846]">
+                Take a fast 30-second benchmark check. Your key hold duration, flight delay, and rhythm fluidity are evaluated instantly against clinical population reference distributions.
+              </p>
+
+              <div className="mt-5 space-y-2 rounded-2xl bg-white/80 p-4 border border-[#c1c8c5]/30">
+                <div className="flex items-center gap-2 text-xs text-[#002620] font-medium">
+                  <span className="text-[#0e7c66] font-bold">✓</span>
+                  <span>30-second rapid typing assessment</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-[#002620] font-medium">
+                  <span className="text-[#0e7c66] font-bold">✓</span>
+                  <span>Population model percentile comparison</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-[#5a6a72]">
+                  <span className="text-[#0e7c66] font-bold">✓</span>
+                  <span>Sample only: Not added to personal baseline</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-5 border-t border-[#d9e5e0] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={startLayer1}
+                className="py-3 px-6 rounded-full bg-[#002620] hover:bg-[#183c35] text-white text-xs font-semibold shadow-md shadow-[#002620]/20 transition-all active:scale-95"
+              >
+                Start Quick Screening →
+              </button>
+              <Link href="/test" className="text-xs font-semibold text-[#5a6a72] hover:text-[#002620]">
+                Test Details
+              </Link>
+            </div>
           </div>
-          <h2 className="mt-3 font-display text-base font-semibold tracking-tight text-ink">
-            Layer 2 — Personal monitoring
-          </h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-            How your timing changes against your own baseline, session by session and across days.
-          </p>
-          <div className="mt-4">
-            <PrimaryButton
-              onClick={() => {
-                setLayer("layer2");
-                router.push("/layer2");
-              }}
-            >
-              Open Layer 2
-            </PrimaryButton>
+
+          {/* Layer 2 Personal Baseline Pathway Card */}
+          <div className="rounded-3xl p-6 sm:p-7 border-2 border-amber-700/25 bg-gradient-to-b from-amber-50/70 via-white to-white shadow-[0_12px_32px_-6px_rgba(180,83,9,0.08)] flex flex-col justify-between hover:border-amber-700/50 transition-all">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="rounded-full bg-amber-900 px-3 py-1 font-mono text-xs font-bold text-white shadow-xs">
+                  LAYER 02
+                </span>
+                <span className="text-xs font-semibold text-amber-900 bg-amber-100/90 border border-amber-900/20 px-3 py-0.5 rounded-full">
+                  Client Longitudinal Baseline
+                </span>
+              </div>
+
+              <h3 className="mt-4 font-display text-xl sm:text-2xl font-bold tracking-tight text-[#183c35]">
+                Daily Baseline &amp; Longitudinal Monitoring
+              </h3>
+              <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[#414846]">
+                Calibrate your own motor baseline across 10 daily sessions. Track subtle day-to-day drift, record medication timing (e.g. ON/OFF state), and secure entries with your 4-digit PIN.
+              </p>
+
+              <div className="mt-5 rounded-2xl bg-white/90 p-4 border border-amber-900/15 shadow-xs">
+                <div className="flex items-center justify-between text-xs font-medium text-[#414846] mb-2">
+                  <span className="font-semibold text-[#002620]">
+                    Calibration Progress: {progress?.sessions ?? 0} of {progress?.required ?? 10} sessions
+                  </span>
+                  <span className="font-semibold text-amber-900">Day {dayShown} of 5</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-[#d9e5e0] overflow-hidden">
+                  <div
+                    className="h-full bg-amber-800 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, ((progress?.sessions ?? 0) / (progress?.required ?? 10)) * 100)}%` }}
+                  />
+                </div>
+                <div className="mt-2.5 flex items-center justify-between text-[11px] text-[#5a6a72]">
+                  <span>🔒 PIN Protected</span>
+                  <span className="font-semibold text-[#002620]">
+                    {established ? "Baseline Locked & Calibrated" : "Calibration In Progress"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-5 border-t border-[#d9e5e0] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={startLayer2}
+                className="py-3 px-6 rounded-full bg-amber-950 hover:bg-amber-900 text-white text-xs font-semibold shadow-md shadow-amber-950/20 transition-all active:scale-95"
+              >
+                Enter Layer 2 Baseline →
+              </button>
+              <Link href="/layer2" className="text-xs font-semibold text-amber-950 hover:underline">
+                View Trends
+              </Link>
+            </div>
           </div>
-        </Card>
+        </div>
       </div>
+
+      {/* ================= Clean History & Profile Shortcut Vitrine ================= */}
+      <section className="glass-panel rounded-3xl p-6 sm:p-7 border border-white/90 shadow-[0_12px_32px_-4px_rgba(19,42,38,0.04)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-display text-base font-bold text-[#131e1b]">
+              Need to Review Past Sessions or Device Settings?
+            </h3>
+            <p className="text-xs text-[#5a6a72] mt-1 max-w-xl leading-relaxed">
+              All your recorded sessions, timing metrics, and exportable PDF reports are organized in your History. Device and account configurations are managed in your Profile.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <Link
+              href="/history"
+              className="py-2 px-5 rounded-full bg-white/80 hover:bg-white text-xs font-semibold text-[#002620] border border-[#c1c8c5]/40 shadow-xs transition-all active:scale-95"
+            >
+              View Session History →
+            </Link>
+            <Link
+              href="/profile"
+              className="py-2 px-5 rounded-full bg-[#002620] hover:bg-[#183c35] text-xs font-semibold text-white shadow-xs transition-all active:scale-95"
+            >
+              Profile Settings
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

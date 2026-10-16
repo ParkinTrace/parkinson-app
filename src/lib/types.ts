@@ -21,6 +21,7 @@ export interface SessionPayload {
   sessionId: string;
   userId: string;
   sessionType: SessionType;
+  layer?: "layer1" | "layer2";
   deviceId: string;
   startedAt: string; // ISO-8601
   endedAt: string; // ISO-8601
@@ -38,7 +39,9 @@ export interface SessionRow {
   started_at: string;
   ended_at: string;
   session_type: SessionType;
+  layer?: "layer1" | "layer2";
   device_id: string;
+  device_metadata?: { layer?: "layer1" | "layer2"; [key: string]: unknown };
   valid: boolean;
   quality_flags: string[];
   features?: Record<string, number | null>;

@@ -115,35 +115,43 @@ function PinInputModalInner({ onSuccess, onRequestSetup, onCancel }: PinInputMod
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pin-input-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm"
+    >
       <div
-        className={`w-full max-w-sm rounded-lg border border-hair bg-paper p-6 shadow-xl ${
+        className={`w-full max-w-sm rounded-3xl border border-white/90 bg-white/90 backdrop-blur-2xl p-7 shadow-2xl ${
           shake ? "animate-shake" : ""
         }`}
       >
-        <p className="label">Session PIN · verify</p>
-        <h3 className="mt-2 font-display text-lg font-semibold tracking-tight text-ink">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-2 h-2 rounded-full bg-[#0e7c66]"></span>
+          <p className="label text-[#002620]">Session PIN · Verification</p>
+        </div>
+        <h3 id="pin-input-title" className="mt-1 font-display text-xl font-bold tracking-tight text-[#183c35]">
           Session Access PIN
         </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+        <p className="mt-1.5 text-xs leading-relaxed text-[#414846]">
           Enter your 4-digit PIN to unlock this measured session. Nothing is recorded until it is unlocked.
         </p>
 
         {error && (
-          <p className="mt-4 rounded-md border border-alert/25 bg-alert-wash px-3 py-2 text-xs text-alert">
+          <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs text-red-800">
             {error}
           </p>
         )}
 
         <div className="mt-5">
-          <span className="label">4-digit PIN</span>
-          <div className="mt-2 flex justify-center gap-3">
+          <div className="flex justify-center gap-3">
             {digits.map((digit, idx) => (
               <input
                 key={idx}
                 ref={(el) => {
                   inputsRef.current[idx] = el;
                 }}
+                aria-label={`Digit ${idx + 1} of 4`}
                 type={masked ? "password" : "text"}
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -153,23 +161,23 @@ function PinInputModalInner({ onSuccess, onRequestSetup, onCancel }: PinInputMod
                 onChange={(e) => handleChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
                 onPaste={handlePaste}
-                className={`h-14 w-12 rounded-md border text-center font-mono text-2xl font-semibold transition-colors disabled:opacity-50 ${
+                className={`h-14 w-12 rounded-2xl border text-center font-mono text-2xl font-bold transition-all disabled:opacity-50 ${
                   error
-                    ? "border-alert/50 bg-alert-wash text-alert"
-                    : "border-hair bg-canvas text-ink focus:border-trace focus:bg-paper"
+                    ? "border-red-300 bg-red-50 text-red-900"
+                    : "border-[#c1c8c5]/50 bg-white text-[#002620] focus:border-[#0e7c66] focus:bg-white shadow-xs"
                 }`}
               />
             ))}
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between px-1">
-          <label className="flex cursor-pointer select-none items-center gap-1.5 text-xs text-muted hover:text-ink">
+        <div className="mt-4 flex items-center justify-between px-1">
+          <label className="flex cursor-pointer select-none items-center gap-1.5 text-xs text-[#5a6a72] hover:text-[#002620]">
             <input
               type="checkbox"
               checked={!masked}
               onChange={(e) => setMasked(!e.target.checked)}
-              className="h-3.5 w-3.5 accent-[#0e7c66]"
+              className="h-3.5 w-3.5 accent-[#002620] rounded"
             />
             Show digits
           </label>
@@ -177,7 +185,7 @@ function PinInputModalInner({ onSuccess, onRequestSetup, onCancel }: PinInputMod
             <button
               type="button"
               onClick={onRequestSetup}
-              className="text-xs font-semibold text-trace underline decoration-trace/30 underline-offset-2"
+              className="text-xs font-semibold text-[#002620] hover:underline"
             >
               Reset / Change PIN
             </button>
@@ -185,21 +193,23 @@ function PinInputModalInner({ onSuccess, onRequestSetup, onCancel }: PinInputMod
         </div>
 
         <div className="mt-6 flex flex-col gap-2">
-          <PrimaryButton
+          <button
+            type="button"
             onClick={() => submitPin()}
             disabled={loading || digits.join("").length !== 4}
-            className="w-full disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full py-3 px-5 rounded-full bg-[#002620] hover:bg-[#183c35] text-white text-xs font-semibold shadow-md shadow-[#002620]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
           >
             {loading ? "Verifying…" : "Unlock & Start Session"}
-          </PrimaryButton>
+          </button>
 
           {onCancel && (
-            <SecondaryButton
+            <button
+              type="button"
               onClick={onCancel}
-              className="w-full py-2 text-xs transition-colors disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-full bg-white/80 hover:bg-white text-[#5a6a72] border border-[#c1c8c5]/40 text-xs font-semibold transition-all active:scale-[0.98]"
             >
               Cancel
-            </SecondaryButton>
+            </button>
           )}
         </div>
       </div>

@@ -14,6 +14,7 @@ import type { SessionStatus } from "@/lib/useSession";
  * so the product rule is only the rule again, and the suite tests the real
  * thing instead of a flag that only exists for tests.
  */
-export function pinRequired(status: SessionStatus): boolean {
+export function pinRequired(status: SessionStatus, layer: "layer1" | "layer2" = "layer2"): boolean {
+  if (layer === "layer1") return false;
   return status === "signed-in";
 }

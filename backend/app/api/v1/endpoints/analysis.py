@@ -7,9 +7,10 @@ POST /api/v1/analysis/session  convenience orchestration: calls both
   No combined score is ever produced (spec 3.3).
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import Field
 
+from app.core.auth import verify_user_authorization
 from app.schemas.session import CamelModel, SessionIngest
 from app.services import pipeline as pipe
 
@@ -58,8 +59,16 @@ def _session_dict(body: SessionIngest) -> dict:    return {
     }
 
 
+def _is_anonymous(uid: str | None) -> bool:
+    return not uid or str(uid) == "00000000-0000-0000-0000-000000000000"
+
+
 @router.post("/analysis/layer1")
-def analyze_layer1(body: SessionIngest) -> dict:
+def analyze_layer1(
+    body: SessionIngest,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    verify_user_authorization(str(body.user_id), authorization, required=not _is_anonymous(str(body.user_id)))
     session = _session_dict(body)
     features = pipe.resolve_features(session)
     try:
@@ -72,7 +81,11 @@ def analyze_layer1(body: SessionIngest) -> dict:
 
 
 @router.post("/analysis/layer2")
-def analyze_layer2(body: AnalysisRequest) -> dict:
+def analyze_layer2(
+    body: AnalysisRequest,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    verify_user_authorization(str(body.user_id), authorization, required=not _is_anonymous(str(body.user_id)))
     session = _session_dict(body)
     recent = body.recent or []
     result = pipe.analyze_session(
@@ -85,7 +98,11 @@ def analyze_layer2(body: AnalysisRequest) -> dict:
 
 
 @router.post("/analysis/session")
-def analyze_session(body: AnalysisRequest) -> dict:
+def analyze_session(
+    body: AnalysisRequest,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    verify_user_authorization(str(body.user_id), authorization, required=not _is_anonymous(str(body.user_id)))
     session = _session_dict(body)
     recent = body.recent or []
     try:
